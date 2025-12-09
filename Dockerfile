@@ -1,6 +1,5 @@
 FROM python:3.12-slim
 
-# Install system deps (optional but useful for DNS/SSL troubleshooting)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates curl \
     && rm -rf /var/lib/apt/lists/*
