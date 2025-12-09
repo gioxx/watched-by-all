@@ -9,7 +9,7 @@ services:
       - TAUTULLI_APIKEY=YOUR_TAUTULLI_API_KEY
       - PLEX_URL=http://PLEX_IP:32400
       - PLEX_TOKEN=YOUR_PLEX_TOKEN
-      # Jellyfin (opzionale, per incrociare la history da Jellyfin)
+      # Jellyfin (optional, to cross-reference history from Jellyfin)
       # - JELLYFIN_URL=http://JELLYFIN_IP:8096
       # - JELLYFIN_APIKEY=YOUR_JELLYFIN_API_KEY
       # - JELLYFIN_USER_MAP={"<jellyfin_user_id>": "<plex_user_id>"}
