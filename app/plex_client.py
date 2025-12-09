@@ -28,3 +28,7 @@ class PlexClient:
     async def get_children(self, rating_key: str):
         # Used for seasons (children of show) and episodes (children of season)
         return await self._get_json(f"/library/metadata/{rating_key}/children")
+
+    async def get_all_leaves(self, rating_key: str):
+        # Returns all leaf items (e.g., all episodes for a show) when supported.
+        return await self._get_json(f"/library/metadata/{rating_key}/allLeaves")
