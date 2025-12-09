@@ -5,21 +5,11 @@ services:
     ports:
       - "8088:8088"
     environment:
-      # Tautulli API base (HTTP root supported, if you use one)
       - TAUTULLI_URL=http://TAUTULLI_LXC_IP:8181
       - TAUTULLI_APIKEY=YOUR_TAUTULLI_API_KEY
-
-      # Plex base URL
       - PLEX_URL=http://PLEX_LXC_IP:32400
       - PLEX_TOKEN=YOUR_PLEX_TOKEN
-
-      # Completion logic
       - WATCH_THRESHOLD=0.95
-
-      # How often to refresh cache (minutes)
       - REFRESH_MINUTES=30
-
-      # Optional: limit how many history rows to pull per refresh (safety for huge histories)
       - HISTORY_MAX_ROWS=200000
-
     restart: unless-stopped
