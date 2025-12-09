@@ -32,6 +32,8 @@ class Cache:
     user_movie_progress: Dict[str, Dict[str, Dict[str, Any]]] = field(default_factory=dict)
     # Shows: user_id -> show_rating_key -> set(episode_rating_keys completed)
     user_show_episodes: Dict[str, Dict[str, Set[str]]] = field(default_factory=dict)
+    # Watched history per user (merged Plex/Jellyfin events)
+    user_history: Dict[str, List[Dict[str, Any]]] = field(default_factory=dict)
 
     # Precomputed results
     movies_by_all: List[str] = field(default_factory=list)   # rating keys
