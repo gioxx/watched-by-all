@@ -5,12 +5,12 @@ services:
     ports:
       - "8088:8088"
     environment:
-      - TAUTULLI_URL=http://TAUTULLI_LXC_IP:8181
+      - TAUTULLI_URL=http://TAUTULLI_IP:8181
       - TAUTULLI_APIKEY=YOUR_TAUTULLI_API_KEY
-      - PLEX_URL=http://PLEX_LXC_IP:32400
+      - PLEX_URL=http://PLEX_IP:32400
       - PLEX_TOKEN=YOUR_PLEX_TOKEN
       # Jellyfin (opzionale, per incrociare la history da Jellyfin)
-      # - JELLYFIN_URL=http://JELLYFIN_LXC_IP:8096
+      # - JELLYFIN_URL=http://JELLYFIN_IP:8096
       # - JELLYFIN_APIKEY=YOUR_JELLYFIN_API_KEY
       # - JELLYFIN_USER_MAP={"<jellyfin_user_id>": "<plex_user_id>"}
       - WATCH_THRESHOLD=0.95
