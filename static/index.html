@@ -157,12 +157,18 @@
         <div class="tabs">
             <button id="tabMovies" class="active">Film</button>
             <button id="tabShows">Serie (complete)</button>
+            <button id="tabHistory">Storico utente</button>
         </div>
 
         <div class="row">
             <input id="search" placeholder="Cerca titolo…" />
             <span id="count" class="pill">—</span>
             <button id="refresh">Refresh</button>
+        </div>
+
+        <div id="historyControls" class="row" style="display:none;">
+            <select id="historyUser" style="background:#0f1320; color:#e9eef5; border:1px solid #1d2330; padding:10px 12px; border-radius:12px; min-width:240px;"></select>
+            <span class="muted">Seleziona l'utente per vedere tutto ciò che ha visto (Plex + Jellyfin).</span>
         </div>
 
         <div id="grid" class="grid"></div>
@@ -199,6 +205,7 @@
         const search = document.getElementById('search');
         const tabMovies = document.getElementById('tabMovies');
         const tabShows = document.getElementById('tabShows');
+        const tabHistory = document.getElementById('tabHistory');
         const refreshBtn = document.getElementById('refresh');
 
         const btnUsers = document.getElementById('btnUsers');
@@ -209,6 +216,8 @@
         const btnSelectAll = document.getElementById('btnSelectAll');
         const btnSelectNone = document.getElementById('btnSelectNone');
         const btnForceRefresh = document.getElementById('btnForceRefresh');
+        const historyControls = document.getElementById('historyControls');
+        const historyUser = document.getElementById('historyUser');
 
         let allUsers = [];
         let selectedUserIds = new Set();
@@ -242,6 +251,13 @@
             allUsers = (data.users || []).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
             selectedUserIds = new Set(data.selected_user_ids || []);
             renderUsers();
+
+            // Populate history select
+            const prev = historyUser.value;
+            historyUser.innerHTML = allUsers.map(u => `<option value="${u.user_id}">${escapeHtml(u.name)} (${escapeHtml(u.user_id)})</option>`).join('');
+            if (prev && allUsers.some(u => u.user_id === prev)) {
+                historyUser.value = prev;
+            }
         }
 
         async function applyUsers() {
@@ -279,6 +295,27 @@
       `;
         }
 
+        function historyHTML(it) {
+            const date = it.date ? new Date(it.date * 1000).toLocaleString() : '—';
+            const source = it.source || '';
+            const type = it.type || '';
+            const percent = typeof it.percent === 'number' ? Math.round(it.percent * 100) : (it.percent || 0);
+            const completed = it.completed ? '✅' : '';
+            const thumb = it.thumb || it.jellyfinThumb || '';
+            return `
+        <div class="card">
+          <div class="poster">
+            ${thumb ? `<img src="${thumb}" alt="">` : `<span class="muted">No poster</span>`}
+          </div>
+          <div class="meta">
+            <div class="title">${escapeHtml(it.title || '')}</div>
+            <div class="sub">${escapeHtml(type)} · ${escapeHtml(source)} ${completed}</div>
+            <div class="muted">Viewed: ${date} · ${percent}%</div>
+          </div>
+        </div>
+      `;
+        }
+
         function escapeHtml(s) {
             return String(s || '').replace(/[&<>"']/g, (c) => ({
                 '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
@@ -288,7 +325,11 @@
         function render() {
             const q = search.value.trim().toLowerCase();
             const filtered = q ? items.filter(i => (i.title || '').toLowerCase().includes(q)) : items;
-            grid.innerHTML = filtered.map(cardHTML).join('');
+            if (mode === 'history') {
+                grid.innerHTML = filtered.map(historyHTML).join('');
+            } else {
+                grid.innerHTML = filtered.map(cardHTML).join('');
+            }
             count.textContent = `${filtered.length} / ${items.length}`;
         }
 
@@ -302,6 +343,22 @@
         async function loadItems() {
             grid.innerHTML = '';
             count.textContent = '—';
+            if (mode === 'history') {
+                if (!historyUser.value && allUsers.length > 0) {
+                    historyUser.value = allUsers[0].user_id;
+                }
+                if (!historyUser.value) {
+                    items = [];
+                    render();
+                    return;
+                }
+                const r = await fetch(`/api/user/${encodeURIComponent(historyUser.value)}/history`);
+                const data = await r.json();
+                items = data.items || [];
+                render();
+                return;
+            }
+
             const url = mode === 'movies' ? '/api/movies' : '/api/shows';
             const r = await fetch(url);
             const data = await r.json();
@@ -313,6 +370,8 @@
             mode = 'movies';
             tabMovies.classList.add('active');
             tabShows.classList.remove('active');
+            tabHistory.classList.remove('active');
+            historyControls.style.display = 'none';
             await loadItems();
         });
 
@@ -320,6 +379,17 @@
             mode = 'shows';
             tabShows.classList.add('active');
             tabMovies.classList.remove('active');
+            tabHistory.classList.remove('active');
+            historyControls.style.display = 'none';
+            await loadItems();
+        });
+
+        tabHistory.addEventListener('click', async () => {
+            mode = 'history';
+            tabHistory.classList.add('active');
+            tabMovies.classList.remove('active');
+            tabShows.classList.remove('active');
+            historyControls.style.display = 'flex';
             await loadItems();
         });
 
@@ -355,6 +425,12 @@
 
         btnForceRefresh.addEventListener('click', async () => {
             await forceRefresh();
+        });
+
+        historyUser.addEventListener('change', async () => {
+            if (mode === 'history') {
+                await loadItems();
+            }
         });
 
         (async () => {
