@@ -231,6 +231,7 @@ async def refresh_cache(force: bool = False) -> None:
     cache.user_movie_progress.clear()
     cache.user_show_episodes.clear()
     cache.user_history.clear()
+    cache.jellyfin_users.clear()
 
     users_data = await tautulli.get_users()
     users = users_data.get("users", []) if isinstance(users_data, dict) else (users_data or [])
@@ -239,6 +240,18 @@ async def refresh_cache(force: bool = False) -> None:
         name = (u.get("friendly_name") or u.get("username") or uid).strip()
         if uid:
             cache.users[uid] = name
+
+    # Jellyfin users (optional)
+    if jellyfin is not None:
+        try:
+            jf_users = await jellyfin.get_users()
+            for ju in jf_users or []:
+                juid = str(ju.get("Id") or ju.get("id") or "").strip()
+                jname = (ju.get("Name") or ju.get("Username") or juid).strip()
+                if juid:
+                    cache.jellyfin_users[juid] = jname
+        except Exception:
+            logger.warning("Jellyfin: failed to fetch users for listing", exc_info=True)
 
     # Pull history with paging
     start = 0
@@ -409,11 +422,15 @@ async def _merge_jellyfin_history(provider_movie_to_plex: Dict[str, str]) -> Non
     if jellyfin is None:
         return
 
-    try:
-        jf_users = await jellyfin.get_users()
-    except Exception:
-        logger.warning("Jellyfin: failed to fetch users", exc_info=True)
-        return
+    jf_users = None
+    if cache.jellyfin_users:
+        jf_users = [{"Id": k, "Name": v} for k, v in cache.jellyfin_users.items()]
+    else:
+        try:
+            jf_users = await jellyfin.get_users()
+        except Exception:
+            logger.warning("Jellyfin: failed to fetch users", exc_info=True)
+            return
 
     try:
         user_map_raw = json.loads(JELLYFIN_USER_MAP or "{}")
@@ -573,6 +590,7 @@ async def api_users():
         {
             "users": [{"user_id": uid, "name": name} for uid, name in cache.users.items()],
             "selected_user_ids": sorted(list(cache.selected_user_ids)),
+            "jellyfin_users": [{"user_id": uid, "name": name} for uid, name in cache.jellyfin_users.items()],
         }
     )
 
