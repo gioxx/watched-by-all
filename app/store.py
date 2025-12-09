@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, Set, Tuple, List, Optional
+from typing import Dict, Set, Tuple, List, Any
 import time
 
 @dataclass
@@ -26,6 +26,12 @@ class Cache:
 
     # Plex episode list per show
     show_episodes: Dict[str, List[str]] = field(default_factory=dict)
+
+    # Per-user progress
+    # Movies: user_id -> rating_key -> {"percent": float 0-1, "completed": bool}
+    user_movie_progress: Dict[str, Dict[str, Dict[str, Any]]] = field(default_factory=dict)
+    # Shows: user_id -> show_rating_key -> set(episode_rating_keys completed)
+    user_show_episodes: Dict[str, Dict[str, Set[str]]] = field(default_factory=dict)
 
     # Precomputed results
     movies_by_all: List[str] = field(default_factory=list)   # rating keys
