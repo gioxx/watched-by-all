@@ -147,7 +147,10 @@
 <body>
     <header>
         <div class="brand">Watched by Everyone</div>
-        <div id="summary" class="pill">Loading…</div>
+        <div style="display:flex; gap:8px; align-items:center;">
+            <button id="btnUsers" class="pill" style="cursor:pointer;">Utenti</button>
+            <div id="summary" class="pill">Loading…</div>
+        </div>
     </header>
 
     <main>
@@ -170,6 +173,25 @@
         </div>
     </main>
 
+    <div id="usersModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.55);">
+        <div style="max-width:720px; margin:8vh auto; background:#0f1320; border:1px solid #1d2330; border-radius:16px; overflow:hidden;">
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:14px 14px; border-bottom:1px solid #1d2330;">
+                <div style="font-weight:700;">Utenti considerati</div>
+                <button id="btnCloseUsers">Chiudi</button>
+            </div>
+            <div style="padding:14px 14px; display:flex; flex-direction:column; gap:10px;">
+                <div class="muted">Se non selezioni nessuno, verranno considerati <b>tutti</b> gli utenti.</div>
+                <div id="usersList" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap:10px;"></div>
+                <div style="display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap; padding-top:6px;">
+                    <button id="btnSelectAll">Seleziona tutti</button>
+                    <button id="btnSelectNone">Nessuno (tutti)</button>
+                    <button id="btnApplyUsers">Applica + refresh</button>
+                    <button id="btnForceRefresh">Refresh forzato</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         const grid = document.getElementById('grid');
         const summary = document.getElementById('summary');
@@ -178,6 +200,65 @@
         const tabMovies = document.getElementById('tabMovies');
         const tabShows = document.getElementById('tabShows');
         const refreshBtn = document.getElementById('refresh');
+
+        const btnUsers = document.getElementById('btnUsers');
+        const usersModal = document.getElementById('usersModal');
+        const btnCloseUsers = document.getElementById('btnCloseUsers');
+        const usersList = document.getElementById('usersList');
+        const btnApplyUsers = document.getElementById('btnApplyUsers');
+        const btnSelectAll = document.getElementById('btnSelectAll');
+        const btnSelectNone = document.getElementById('btnSelectNone');
+        const btnForceRefresh = document.getElementById('btnForceRefresh');
+
+        let allUsers = [];
+        let selectedUserIds = new Set();
+
+        function openUsers() { usersModal.style.display = 'block'; }
+        function closeUsers() { usersModal.style.display = 'none'; }
+
+        function renderUsers() {
+            usersList.innerHTML = allUsers.map(u => {
+                const checked = selectedUserIds.has(u.user_id) ? 'checked' : '';
+                return `
+        <label style="display:flex; gap:10px; align-items:center; border:1px solid #1d2330; border-radius:12px; padding:10px;">
+          <input type="checkbox" data-user-id="${u.user_id}" ${checked} />
+          <span>${escapeHtml(u.name)} <span class="muted">(${escapeHtml(u.user_id)})</span></span>
+        </label>
+      `;
+            }).join('');
+
+            usersList.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                cb.addEventListener('change', (e) => {
+                    const id = e.target.getAttribute('data-user-id');
+                    if (e.target.checked) selectedUserIds.add(id);
+                    else selectedUserIds.delete(id);
+                });
+            });
+        }
+
+        async function loadUsers() {
+            const r = await fetch('/api/users');
+            const data = await r.json();
+            allUsers = (data.users || []).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+            selectedUserIds = new Set(data.selected_user_ids || []);
+            renderUsers();
+        }
+
+        async function applyUsers() {
+            await fetch('/api/selected-users', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ selected_user_ids: Array.from(selectedUserIds) })
+            });
+            await loadSummary();
+            await loadItems();
+        }
+
+        async function forceRefresh() {
+            await fetch('/api/refresh', { method: 'POST' });
+            await loadSummary();
+            await loadItems();
+        }
 
         let mode = 'movies';
         let items = [];
@@ -249,8 +330,36 @@
             await loadItems();
         });
 
+        btnUsers.addEventListener('click', async () => {
+            await loadUsers();
+            openUsers();
+        });
+
+        btnCloseUsers.addEventListener('click', closeUsers);
+        usersModal.addEventListener('click', (e) => { if (e.target === usersModal) closeUsers(); });
+
+        btnSelectAll.addEventListener('click', () => {
+            selectedUserIds = new Set(allUsers.map(u => u.user_id));
+            renderUsers();
+        });
+
+        btnSelectNone.addEventListener('click', () => {
+            selectedUserIds = new Set();
+            renderUsers();
+        });
+
+        btnApplyUsers.addEventListener('click', async () => {
+            await applyUsers();
+            closeUsers();
+        });
+
+        btnForceRefresh.addEventListener('click', async () => {
+            await forceRefresh();
+        });
+
         (async () => {
             await loadSummary();
+            try { await loadUsers(); } catch (e) { }
             await loadItems();
         })();
     </script>
