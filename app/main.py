@@ -372,7 +372,7 @@ async def _merge_jellyfin_history(provider_movie_to_plex: Dict[str, str]) -> Non
     except Exception:
         user_map_raw = {}
 
-    # Normalized map so you can map per ID o per nome (case-insensitive):
+    # Normalized map so you can map by ID or by name (case-insensitive):
     # {"jellyfinIdOrName": "plexUserIdOrName"}
     user_map = {str(k).lower(): str(v).strip() for k, v in user_map_raw.items()}
     name_to_plex = {v.lower(): k for k, v in cache.users.items()}
@@ -382,19 +382,19 @@ async def _merge_jellyfin_history(provider_movie_to_plex: Dict[str, str]) -> Non
         name = (jf_user.get("Name") or jf_user.get("Username") or "").strip()
         name_lower = name.lower()
 
-        # 1) Mapping esplicito via env (può essere per ID o per nome)
+        # 1) Explicit mapping via env (can be by ID or name)
         mapped = user_map.get(uid.lower()) if uid else None
         if not mapped and name_lower:
             mapped = user_map.get(name_lower)
         if mapped:
-            # Il valore può essere user_id Plex o friendly_name
+            # The mapped value can be Plex user_id or friendly_name
             if mapped in cache.users:
                 return mapped
             ml = mapped.lower()
             if ml in name_to_plex:
                 return name_to_plex[ml]
 
-        # 2) Fallback: match per nome (case-insensitive) se coincidono
+        # 2) Fallback: match by name (case-insensitive)
         if name_lower and name_lower in name_to_plex:
             return name_to_plex[name_lower]
 
