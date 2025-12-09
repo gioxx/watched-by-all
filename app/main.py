@@ -235,20 +235,29 @@ async def refresh_cache(force: bool = False) -> None:
     cache.last_refresh_ts = time.time()
 
 
-async def _plex_title_thumb(rating_key: str) -> Dict[str, str]:
+async def _plex_title_thumb(rating_key: str) -> Dict[str, str] | None:
     """
     Fetch minimal metadata from Plex for UI.
+
+    If Plex returns 404 (item missing/removed), return None so callers can skip it.
     """
-    j = await plex.get_metadata(rating_key)
+    try:
+        j = await plex.get_metadata(rating_key)
+    except HTTPStatusError as e:
+        if e.response is not None and e.response.status_code == 404:
+            return None
+        raise
+
     md = (j.get("MediaContainer", {}).get("Metadata") or [{}])[0]
     title = md.get("title") or ""
     year = md.get("year")
     thumb = md.get("thumb") or ""
     typ = md.get("type") or ""
-    # Build an absolute thumbnail URL that goes through Plex (token included via query).
+
     thumb_url = ""
     if thumb:
         thumb_url = f"{PLEX_URL}{thumb}?X-Plex-Token={PLEX_TOKEN}"
+
     return {
         "ratingKey": str(rating_key),
         "title": str(title),
@@ -339,7 +348,9 @@ async def movies():
     await refresh_cache(force=False)
     items: List[Dict[str, str]] = []
     for rk in cache.movies_by_all:
-        items.append(await _plex_title_thumb(rk))
+        it = await _plex_title_thumb(rk)
+        if it is not None:
+            items.append(it)
     return JSONResponse({"items": items})
 
 
@@ -348,5 +359,7 @@ async def shows():
     await refresh_cache(force=False)
     items: List[Dict[str, str]] = []
     for rk in cache.shows_by_all:
-        items.append(await _plex_title_thumb(rk))
+        it = await _plex_title_thumb(rk)
+        if it is not None:
+            items.append(it)
     return JSONResponse({"items": items})
