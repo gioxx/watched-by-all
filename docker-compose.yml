@@ -5,16 +5,8 @@ services:
     ports:
       - "8088:8088"
     environment:
-      - TAUTULLI_URL=http://TAUTULLI_IP:8181
-      - TAUTULLI_APIKEY=YOUR_TAUTULLI_API_KEY
-      - PLEX_URL=http://PLEX_IP:32400
-      - PLEX_TOKEN=YOUR_PLEX_TOKEN
-      # Jellyfin (optional, to cross-reference history from Jellyfin)
-      # - JELLYFIN_URL=http://JELLYFIN_IP:8096
-      # - JELLYFIN_APIKEY=YOUR_JELLYFIN_API_KEY
-      # Mapping accepts IDs or names (case-insensitive), JSON between quotation marks:
-      # - JELLYFIN_USER_MAP='{"jellyfinUserOrId":"plexUserIdOrName"}'
+      - JELLYFIN_URL=http://JELLYFIN_IP:8096
+      - JELLYFIN_APIKEY=YOUR_JELLYFIN_API_KEY
       - WATCH_THRESHOLD=0.95
       - REFRESH_MINUTES=30
-      - HISTORY_MAX_ROWS=200000
     restart: unless-stopped

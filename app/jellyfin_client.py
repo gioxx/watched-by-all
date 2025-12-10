@@ -32,3 +32,14 @@ class JellyfinClient:
             Fields="ProviderIds,SeriesId,ParentId,UserData,PrimaryImageTag,SeriesPrimaryImageTag,ImageTags",
             EnableTotalRecordCount=False,
         )
+
+    async def get_series_episodes(self, series_id: str):
+        # All episodes for a series
+        return await self._get(
+            "/Items",
+            ParentId=series_id,
+            IncludeItemTypes="Episode",
+            Recursive=True,
+            Fields="Id",
+            EnableTotalRecordCount=False,
+        )

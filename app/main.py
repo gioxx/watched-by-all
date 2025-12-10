@@ -1,92 +1,37 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import os
-import re
 import time
 from datetime import datetime
-from typing import Any, Dict, List, Optional
-
-from httpx import HTTPStatusError
+from typing import Any, Dict, List
 
 from fastapi import FastAPI, Body
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.tautulli_client import TautulliClient
-from app.plex_client import PlexClient
 from app.jellyfin_client import JellyfinClient
 from app.store import Cache
 
 
-TAUTULLI_URL = os.environ.get("TAUTULLI_URL", "").strip()
-TAUTULLI_APIKEY = os.environ.get("TAUTULLI_APIKEY", "").strip()
-PLEX_URL = os.environ.get("PLEX_URL", "").strip()
-PLEX_TOKEN = os.environ.get("PLEX_TOKEN", "").strip()
 JELLYFIN_URL = os.environ.get("JELLYFIN_URL", "").strip()
 JELLYFIN_APIKEY = os.environ.get("JELLYFIN_APIKEY", "").strip()
-JELLYFIN_USER_MAP = os.environ.get("JELLYFIN_USER_MAP", "{}")
 
 WATCH_THRESHOLD = float(os.environ.get("WATCH_THRESHOLD", "0.95"))
 REFRESH_MINUTES = int(os.environ.get("REFRESH_MINUTES", "30"))
-HISTORY_MAX_ROWS = int(os.environ.get("HISTORY_MAX_ROWS", "200000"))
 
-if not (TAUTULLI_URL and TAUTULLI_APIKEY and PLEX_URL and PLEX_TOKEN):
-    # Fail fast with a clear error in logs.
-    raise RuntimeError("Missing required env vars: TAUTULLI_URL, TAUTULLI_APIKEY, PLEX_URL, PLEX_TOKEN")
+if not (JELLYFIN_URL and JELLYFIN_APIKEY):
+    raise RuntimeError("Missing required env vars: JELLYFIN_URL, JELLYFIN_APIKEY")
 
-tautulli = TautulliClient(TAUTULLI_URL, TAUTULLI_APIKEY)
-plex = PlexClient(PLEX_URL, PLEX_TOKEN)
-jellyfin: Optional[JellyfinClient] = None
-if JELLYFIN_URL and JELLYFIN_APIKEY:
-    jellyfin = JellyfinClient(JELLYFIN_URL, JELLYFIN_APIKEY)
+jellyfin = JellyfinClient(JELLYFIN_URL, JELLYFIN_APIKEY)
 
 cache = Cache()
-app = FastAPI(title="Plex Watched-By-All Dashboard")
+app = FastAPI(title="Jellyfin Watched-By-All Dashboard")
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 logger = logging.getLogger("plex-watched-by-all")
-
-
-def _is_completed_item(h: Dict[str, Any]) -> bool:
-    """
-    Determine whether a history entry counts as "completed".
-
-    Priority:
-      1) watched_status == 1 (best, aligns with Plex played state when present)
-      2) percent_complete >= WATCH_THRESHOLD (fallback)
-    """
-    ws = h.get("watched_status")
-    if ws is not None:
-        try:
-            return int(ws) == 1
-        except Exception:
-            pass
-
-    pc = h.get("percent_complete")
-    if pc is None:
-        return False
-    try:
-        # percent_complete is usually 0..100
-        pc_float = float(pc) / 100.0 if float(pc) > 1.0 else float(pc)
-        return pc_float >= WATCH_THRESHOLD
-    except Exception:
-        return False
-
-
-def _completion_ratio(h: Dict[str, Any]) -> float:
-    """Return completion ratio in 0..1 (best effort)."""
-    pc = h.get("percent_complete")
-    if pc is None:
-        return 0.0
-    try:
-        pc_float = float(pc)
-        return pc_float / 100.0 if pc_float > 1.0 else pc_float
-    except Exception:
-        return 0.0
 
 
 def _effective_user_ids() -> List[str]:
@@ -106,25 +51,6 @@ def _provider_key(provider: str, ident: str) -> str:
     if not provider or not ident:
         return ""
     return f"{provider}:{ident}"
-
-
-def _provider_movie_key_from_guid(guid: str) -> str:
-    guid = guid or ""
-    if "themoviedb" in guid:
-        m = re.search(r"themoviedb://(\d+)", guid)
-        if m:
-            return _provider_key("tmdb", m.group(1))
-    if "imdb" in guid:
-        m = re.search(r"imdb://(tt\d+)", guid)
-        if m:
-            return _provider_key("imdb", m.group(1))
-    if "thetvdb" in guid:
-        m = re.search(r"thetvdb://(\d+)", guid)
-        if m:
-            return _provider_key("tvdb", m.group(1))
-    if "local" in guid:
-        return ""
-    return ""
 
 
 def _provider_key_from_ids(ids: Dict[str, Any]) -> str:
@@ -163,65 +89,32 @@ def _record_history(user_id: str, event: Dict[str, Any]) -> None:
     cache.user_history.setdefault(user_id, []).append(event)
 
 
-async def _plex_show_episode_keys(show_rating_key: str) -> List[str]:
-    """Return all episode rating keys for a given show.
-
-    Primary strategy: use Plex /allLeaves (fast + avoids season enumeration).
-    Fallback: enumerate show -> seasons -> episodes via /children.
-
-    IMPORTANT: Never crash the app if a ratingKey can't be resolved (404).
-    """
-    if show_rating_key in cache.show_episodes:
-        return cache.show_episodes[show_rating_key]
-
-    episode_keys: List[str] = []
-
-    # 1) Try /allLeaves first.
+async def _jellyfin_show_episode_keys(show_id: str) -> List[str]:
+    if show_id in cache.show_episodes:
+        return cache.show_episodes[show_id]
+    if jellyfin is None:
+        return []
     try:
-        leaves_json = await plex.get_all_leaves(show_rating_key)
-        leaves = leaves_json.get("MediaContainer", {}).get("Metadata", []) or []
-        for e in leaves:
-            ek = str(e.get("ratingKey", "")).strip()
-            if ek:
-                episode_keys.append(ek)
-    except HTTPStatusError as e:
-        if e.response is not None and e.response.status_code != 404:
-            raise
+        resp = await jellyfin.get_series_episodes(show_id)
+        items = resp.get("Items", []) if isinstance(resp, dict) else (resp or [])
+        eps = [str(e.get("Id")) for e in items if e.get("Id")]
+        cache.show_episodes[show_id] = eps
+        return eps
+    except Exception:
+        return []
 
-    # 2) Fallback to /children traversal.
-    if not episode_keys:
-        try:
-            seasons_json = await plex.get_children(show_rating_key)
-            seasons = seasons_json.get("MediaContainer", {}).get("Metadata", []) or []
 
-            for s in seasons:
-                season_key = str(s.get("ratingKey", "")).strip()
-                if not season_key:
-                    continue
-                eps_json = await plex.get_children(season_key)
-                eps = eps_json.get("MediaContainer", {}).get("Metadata", []) or []
-                for e in eps:
-                    ek = str(e.get("ratingKey", "")).strip()
-                    if ek:
-                        episode_keys.append(ek)
-        except HTTPStatusError as e:
-            if e.response is not None and e.response.status_code != 404:
-                raise
-
-    cache.show_episodes[show_rating_key] = episode_keys
-    return episode_keys
+async def _show_episode_keys(show_rating_key: str) -> List[str]:
+    if cache.show_episodes.get(show_rating_key):
+        return cache.show_episodes[show_rating_key]
+    return await _jellyfin_show_episode_keys(show_rating_key)
 
 
 async def refresh_cache(force: bool = False) -> None:
-    """
-    Pull users + history from Tautulli, compute:
-      - movies watched by all users
-      - shows where all episodes watched by all users
-    """
+    """Pull users + history from Jellyfin only and compute intersections."""
     if not force and not cache.is_stale(REFRESH_MINUTES):
         return
 
-    # Reset
     cache.users.clear()
     cache.completed.clear()
     cache.movies.clear()
@@ -232,121 +125,107 @@ async def refresh_cache(force: bool = False) -> None:
     cache.user_show_episodes.clear()
     cache.user_history.clear()
     cache.jellyfin_users.clear()
+    cache.jellyfin_meta.clear()
 
-    users_data = await tautulli.get_users()
-    users = users_data.get("users", []) if isinstance(users_data, dict) else (users_data or [])
-    for u in users:
-        uid = str(u.get("user_id", "")).strip()
-        name = (u.get("friendly_name") or u.get("username") or uid).strip()
-        if uid:
-            cache.users[uid] = name
+    try:
+        jf_users = await jellyfin.get_users()
+        for ju in jf_users or []:
+            juid = str(ju.get("Id") or ju.get("id") or "").strip()
+            jname = (ju.get("Name") or ju.get("Username") or juid).strip()
+            if juid:
+                cache.jellyfin_users[juid] = jname
+                cache.users[juid] = jname
+    except Exception:
+        logger.warning("Jellyfin: failed to fetch users", exc_info=True)
+        return
 
-    # Jellyfin users (optional)
-    if jellyfin is not None:
+    for juid, _ in cache.users.items():
         try:
-            jf_users = await jellyfin.get_users()
-            for ju in jf_users or []:
-                juid = str(ju.get("Id") or ju.get("id") or "").strip()
-                jname = (ju.get("Name") or ju.get("Username") or juid).strip()
-                if juid:
-                    cache.jellyfin_users[juid] = jname
+            items_resp = await jellyfin.get_user_items(juid)
         except Exception:
-            logger.warning("Jellyfin: failed to fetch users for listing", exc_info=True)
+            logger.warning("Jellyfin: failed to fetch items for user %s", juid, exc_info=True)
+            continue
 
-    # Pull history with paging
-    start = 0
-    page_size = 1000
-    pulled = 0
-
-    provider_movie_to_plex: Dict[str, str] = {}
-
-    while True:
-        if pulled >= HISTORY_MAX_ROWS:
-            break
-        data = await tautulli.get_history(start=start, length=page_size)
-        rows = data.get("data", []) if isinstance(data, dict) else (data or [])
-        if not rows:
-            break
-
-        for h in rows:
-            uid = str(h.get("user_id", "")).strip()
-            media_type = (h.get("media_type") or "").strip().lower()
-
-            if not uid or uid not in cache.users:
+        items = items_resp.get("Items", []) if isinstance(items_resp, dict) else (items_resp or [])
+        for it in items:
+            typ = (it.get("Type") or "").lower()
+            if typ not in ("movie", "episode"):
                 continue
 
-            if media_type == "movie":
-                rk = str(h.get("rating_key", "")).strip()
-                if rk:
-                    cache.movies.add(rk)
-                    if _is_completed_item(h):
-                        cache.completed.add((uid, rk))
+            item_id = str(it.get("Id") or "").strip()
+            if not item_id:
+                continue
 
-                    pk = _provider_movie_key_from_guid(str(h.get("guid", "")))
-                    if pk:
-                        provider_movie_to_plex.setdefault(pk, rk)
+            primary_tag = it.get("PrimaryImageTag") or (it.get("ImageTags") or {}).get("Primary") or ""
+            series_primary_tag = it.get("SeriesPrimaryImageTag") or ""
+            series_id = it.get("SeriesId") or ""
+            thumb_url = ""
+            if primary_tag:
+                thumb_url = _jellyfin_thumb(item_id, primary_tag)
+            elif series_primary_tag and series_id:
+                thumb_url = _jellyfin_thumb(series_id, series_primary_tag)
 
-                    # Track per-user movie progress
-                    cache.user_movie_progress.setdefault(uid, {})
-                    entry = cache.user_movie_progress[uid].setdefault(rk, {"percent": 0.0, "completed": False})
-                    entry["percent"] = max(entry.get("percent", 0.0), _completion_ratio(h))
-                    entry["completed"] = bool(entry.get("completed")) or _is_completed_item(h)
-
-                    event = {
-                        "source": "plex",
-                        "type": "movie",
-                        "ratingKey": rk,
-                        "providerKey": pk,
-                        "percent": _completion_ratio(h),
-                        "completed": _is_completed_item(h),
-                        "date": float(h.get("date") or 0),
-                        "title": h.get("title") or h.get("full_title") or "",
-                    }
-                    _record_history(uid, event)
-
-            elif media_type == "episode":
-                ep_rk = str(h.get("rating_key", "")).strip()
-                show_rk = str(h.get("grandparent_rating_key", "")).strip()
-                if show_rk:
-                    cache.shows.add(show_rk)
-                if ep_rk and _is_completed_item(h):
-                    cache.completed.add((uid, ep_rk))
-
-                if show_rk and ep_rk and _is_completed_item(h):
-                    # Track per-user completed episodes for show progress
-                    cache.user_show_episodes.setdefault(uid, {})
-                    cache.user_show_episodes[uid].setdefault(show_rk, set()).add(ep_rk)
-
-                if ep_rk:
-                    event = {
-                        "source": "plex",
-                        "type": "episode",
-                        "ratingKey": ep_rk,
-                        "showRatingKey": show_rk,
-                        "percent": _completion_ratio(h),
-                        "completed": _is_completed_item(h),
-                        "date": float(h.get("date") or 0),
-                        "title": h.get("title") or "",
-                        "grandparentTitle": h.get("grandparent_title") or "",
-                    }
-                    _record_history(uid, event)
-
-        pulled += len(rows)
-        start += page_size
-
-        # If Tautulli returns total_records, we can stop early.
-        total = None
-        if isinstance(data, dict):
-            total = data.get("recordsTotal") or data.get("total_records") or data.get("filteredCount")
-        if total is not None:
+            ud = it.get("UserData", {}) or {}
+            played_pct = 0.0
             try:
-                if start >= int(total):
-                    break
+                played_pct = float(ud.get("PlayedPercentage", 0.0)) / 100.0
             except Exception:
-                pass
+                played_pct = 0.0
+            is_completed = bool(ud.get("Played")) or played_pct >= WATCH_THRESHOLD
 
-    if jellyfin is not None:
-        await _merge_jellyfin_history(provider_movie_to_plex)
+            if typ == "movie":
+                cache.movies.add(item_id)
+                if is_completed:
+                    cache.completed.add((juid, item_id))
+                cache.user_movie_progress.setdefault(juid, {})
+                entry = cache.user_movie_progress[juid].setdefault(item_id, {"percent": 0.0, "completed": False})
+                entry["percent"] = max(entry.get("percent", 0.0), played_pct)
+                entry["completed"] = bool(entry.get("completed")) or is_completed
+
+                cache.jellyfin_meta[item_id] = {
+                    "ratingKey": item_id,
+                    "title": it.get("Name") or "",
+                    "year": str(it.get("ProductionYear") or ""),
+                    "type": "movie",
+                    "thumb": thumb_url,
+                }
+
+            elif typ == "episode":
+                show_id = str(it.get("SeriesId") or "").strip()
+                if show_id:
+                    cache.shows.add(show_id)
+                if is_completed:
+                    cache.completed.add((juid, item_id))
+                if show_id and is_completed:
+                    cache.user_show_episodes.setdefault(juid, {})
+                    cache.user_show_episodes[juid].setdefault(show_id, set()).add(item_id)
+                if show_id and show_id not in cache.jellyfin_meta:
+                    cache.jellyfin_meta[show_id] = {
+                        "ratingKey": show_id,
+                        "title": it.get("SeriesName") or "",
+                        "year": "",
+                        "type": "show",
+                        "thumb": thumb_url,
+                    }
+
+            event = {
+                "source": "jellyfin",
+                "type": typ,
+                "ratingKey": item_id,
+                "providerKey": _provider_key_from_ids(it.get("ProviderIds", {})),
+                "percent": played_pct,
+                "completed": is_completed,
+                "date": _ts_from_iso(ud.get("LastPlayedDate")) if isinstance(ud, dict) else 0.0,
+                "title": it.get("Name") or "",
+                "year": it.get("ProductionYear") or "",
+                "seriesName": it.get("SeriesName") or "",
+                "seasonName": it.get("SeasonName") or "",
+                "episodeTitle": it.get("Name") or "",
+                "episodeId": item_id,
+                "jellyfinId": item_id,
+                "thumb": thumb_url,
+            }
+            _record_history(juid, event)
 
     user_ids = _effective_user_ids()
 
@@ -367,7 +246,7 @@ async def refresh_cache(force: bool = False) -> None:
     # Shows watched by all (ALL episodes watched by ALL users)
     shows_by_all: List[str] = []
     for sk in cache.shows:
-        eps = await _plex_show_episode_keys(sk)
+        eps = await _show_episode_keys(sk)
         if not eps:
             continue
         ok = True
@@ -385,165 +264,11 @@ async def refresh_cache(force: bool = False) -> None:
     cache.last_refresh_ts = time.time()
 
 
-async def _plex_title_thumb(rating_key: str) -> Dict[str, str] | None:
-    """
-    Fetch minimal metadata from Plex for UI.
-
-    If Plex returns 404 (item missing/removed), return None so callers can skip it.
-    """
-    try:
-        j = await plex.get_metadata(rating_key)
-    except HTTPStatusError as e:
-        if e.response is not None and e.response.status_code == 404:
-            return None
-        raise
-
-    md = (j.get("MediaContainer", {}).get("Metadata") or [{}])[0]
-    title = md.get("title") or ""
-    year = md.get("year")
-    thumb = md.get("thumb") or ""
-    typ = md.get("type") or ""
-
-    thumb_url = ""
-    if thumb:
-        thumb_url = f"{PLEX_URL}{thumb}?X-Plex-Token={PLEX_TOKEN}"
-
-    return {
-        "ratingKey": str(rating_key),
-        "title": str(title),
-        "year": str(year) if year is not None else "",
-        "type": str(typ),
-        "thumb": thumb_url,
-    }
-
-
-async def _merge_jellyfin_history(provider_movie_to_plex: Dict[str, str]) -> None:
-    """Augment completion data with Jellyfin history (movies only for now)."""
-    if jellyfin is None:
-        return
-
-    jf_users = None
-    if cache.jellyfin_users:
-        jf_users = [{"Id": k, "Name": v} for k, v in cache.jellyfin_users.items()]
-    else:
-        try:
-            jf_users = await jellyfin.get_users()
-        except Exception:
-            logger.warning("Jellyfin: failed to fetch users", exc_info=True)
-            return
-
-    try:
-        user_map_raw = json.loads(JELLYFIN_USER_MAP or "{}")
-    except Exception:
-        user_map_raw = {}
-
-    # Normalized map so you can map by ID or by name (case-insensitive):
-    # {"jellyfinIdOrName": "plexUserIdOrName"}
-    user_map = {str(k).lower(): str(v).strip() for k, v in user_map_raw.items()}
-    name_to_plex = {v.lower(): k for k, v in cache.users.items()}
-
-    def map_user(jf_user: Dict[str, Any]) -> Optional[str]:
-        uid = str(jf_user.get("Id", "") or jf_user.get("id", "")).strip()
-        name = (jf_user.get("Name") or jf_user.get("Username") or "").strip()
-        name_lower = name.lower()
-
-        # 1) Explicit mapping via env (can be by ID or name)
-        mapped = user_map.get(uid.lower()) if uid else None
-        if not mapped and name_lower:
-            mapped = user_map.get(name_lower)
-        if mapped:
-            # The mapped value can be Plex user_id or friendly_name
-            if mapped in cache.users:
-                return mapped
-            ml = mapped.lower()
-            if ml in name_to_plex:
-                return name_to_plex[ml]
-
-        # 2) Fallback: match by name (case-insensitive)
-        if name_lower and name_lower in name_to_plex:
-            return name_to_plex[name_lower]
-
-        return None
-
-    mapped_users: List[str] = []
-    skipped_users: List[str] = []
-
-    for jf_u in jf_users or []:
-        plex_uid = map_user(jf_u)
-        jf_name = (jf_u.get("Name") or jf_u.get("Username") or jf_u.get("Id") or "").strip()
-        if not plex_uid:
-            skipped_users.append(jf_name)
-            continue
-
-        mapped_users.append(f"{jf_name}->{plex_uid}")
-
-        try:
-            items_resp = await jellyfin.get_user_items(str(jf_u.get("Id") or jf_u.get("id")))
-        except Exception:
-            logger.warning("Jellyfin: failed to fetch items for user %s", jf_name, exc_info=True)
-            continue
-
-        items = items_resp.get("Items", []) if isinstance(items_resp, dict) else (items_resp or [])
-        for it in items:
-            typ = (it.get("Type") or "").lower()
-            if typ not in ("movie", "episode"):
-                continue
-
-            provider_ids = it.get("ProviderIds", {})
-            pk = _provider_key_from_ids(provider_ids)
-            plex_rk = provider_movie_to_plex.get(pk) if (pk and typ == "movie") else None
-
-            primary_tag = it.get("PrimaryImageTag") or (it.get("ImageTags") or {}).get("Primary") or ""
-            series_primary_tag = it.get("SeriesPrimaryImageTag") or ""
-            series_id = it.get("SeriesId") or ""
-            thumb_url = ""
-            if primary_tag:
-                thumb_url = _jellyfin_thumb(it.get("Id"), primary_tag)
-            elif series_primary_tag and series_id:
-                thumb_url = _jellyfin_thumb(series_id, series_primary_tag)
-
-            ud = it.get("UserData", {}) or {}
-            played_pct = 0.0
-            try:
-                played_pct = float(ud.get("PlayedPercentage", 0.0)) / 100.0
-            except Exception:
-                played_pct = 0.0
-            is_completed = bool(ud.get("Played")) or played_pct >= WATCH_THRESHOLD
-
-            if typ == "movie" and plex_rk:
-                cache.movies.add(plex_rk)
-                if is_completed:
-                    cache.completed.add((plex_uid, plex_rk))
-
-                cache.user_movie_progress.setdefault(plex_uid, {})
-                entry = cache.user_movie_progress[plex_uid].setdefault(plex_rk, {"percent": 0.0, "completed": False})
-                entry["percent"] = max(entry.get("percent", 0.0), played_pct)
-                entry["completed"] = bool(entry.get("completed")) or is_completed
-
-            # Record history even if we cannot map to a Plex ratingKey
-            event = {
-                "source": "jellyfin",
-                "type": typ,
-                "ratingKey": plex_rk if typ == "movie" else None,
-                "providerKey": pk,
-                "percent": played_pct,
-                "completed": is_completed,
-                "date": _ts_from_iso(ud.get("LastPlayedDate")) if isinstance(ud, dict) else 0.0,
-                "title": it.get("Name") or "",
-                "year": it.get("ProductionYear") or "",
-                "seriesName": it.get("SeriesName") or "",
-                "seasonName": it.get("SeasonName") or "",
-                "episodeTitle": it.get("Name") or "",
-                "episodeId": it.get("Id"),
-                "jellyfinId": it.get("Id"),
-                "thumb": thumb_url,
-            }
-            _record_history(plex_uid, event)
-
-    if mapped_users:
-        logger.info("Jellyfin: mapped users: %s", ", ".join(mapped_users))
-    if skipped_users:
-        logger.info("Jellyfin: skipped users without mapping/match: %s", ", ".join(skipped_users))
+async def _item_title_thumb(rating_key: str) -> Dict[str, str] | None:
+    jf_md = cache.jellyfin_meta.get(str(rating_key))
+    if jf_md:
+        return jf_md
+    return None
 
 
 @app.on_event("startup")
@@ -628,7 +353,7 @@ async def movies():
     await refresh_cache(force=False)
     items: List[Dict[str, str]] = []
     for rk in cache.movies_by_all:
-        it = await _plex_title_thumb(rk)
+        it = await _item_title_thumb(rk)
         if it is not None:
             items.append(it)
     return JSONResponse({"items": items})
@@ -639,7 +364,7 @@ async def shows():
     await refresh_cache(force=False)
     items: List[Dict[str, str]] = []
     for rk in cache.shows_by_all:
-        it = await _plex_title_thumb(rk)
+        it = await _item_title_thumb(rk)
         if it is not None:
             items.append(it)
     return JSONResponse({"items": items})
@@ -656,7 +381,9 @@ async def user_items(user_id: str):
     movies_resp: List[Dict[str, Any]] = []
     user_movies = cache.user_movie_progress.get(user_id, {})
     for rk, prog in user_movies.items():
-        md = await _plex_title_thumb(rk)
+        md = await _item_title_thumb(rk)
+        if md is None:
+            continue
         md.update(
             {
                 "completed": bool(prog.get("completed")),
@@ -668,10 +395,12 @@ async def user_items(user_id: str):
     shows_resp: List[Dict[str, Any]] = []
     user_shows = cache.user_show_episodes.get(user_id, {})
     for show_rk, eps_seen in user_shows.items():
-        total_eps = await _plex_show_episode_keys(show_rk)
+        total_eps = await _show_episode_keys(show_rk)
         total = len(total_eps)
         watched = len(eps_seen)
-        md = await _plex_title_thumb(show_rk)
+        md = await _item_title_thumb(show_rk)
+        if md is None:
+            continue
         md.update(
             {
                 "watchedEpisodes": watched,
@@ -686,7 +415,7 @@ async def user_items(user_id: str):
 
 @app.get("/api/user/{user_id}/history")
 async def user_history(user_id: str):
-    """Return full watched history (Plex via Tautulli + Jellyfin) for a single user."""
+    """Return full watched history (Jellyfin)."""
     await refresh_cache(force=False)
 
     if user_id not in cache.users:
@@ -700,15 +429,14 @@ async def user_history(user_id: str):
         rk = ev.get("ratingKey")
         thumb = ev.get("thumb")
 
-        # If a Plex item no longer exists, skip it.
         if rk:
-            md = await _plex_title_thumb(str(rk))
+            md = await _item_title_thumb(str(rk))
             if not md:
                 continue
             out.update(md)
             thumb = out.get("thumb") or thumb
 
-        # If there is no Plex match and no thumb (missing poster), skip the entry.
+        # If there is no metadata/poster, skip the entry.
         if not thumb:
             continue
 

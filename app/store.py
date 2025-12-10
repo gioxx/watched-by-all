@@ -36,6 +36,8 @@ class Cache:
     user_history: Dict[str, List[Dict[str, Any]]] = field(default_factory=dict)
     # Jellyfin users cache (id -> name)
     jellyfin_users: Dict[str, str] = field(default_factory=dict)
+    # Jellyfin metadata cache (item_id -> minimal metadata)
+    jellyfin_meta: Dict[str, Dict[str, str]] = field(default_factory=dict)
 
     # Precomputed results
     movies_by_all: List[str] = field(default_factory=list)   # rating keys
