@@ -151,6 +151,12 @@
             font-size: 12px;
         }
 
+        .section-title {
+            margin: 0 0 10px;
+            font-weight: 700;
+            font-size: 18px;
+        }
+
         .footer {
             margin-top: 14px;
             color: #94a3b8;
@@ -407,6 +413,8 @@
             const q = search.value.trim().toLowerCase();
             const filtered = q ? items.filter(i => (i.title || '').toLowerCase().includes(q)) : items;
             if (mode === 'history') {
+                grid.classList.remove('grid');
+                grid.style.display = 'block';
                 const movies = filtered.filter(i => !i.seriesName);
                 const episodes = filtered.filter(i => i.seriesName);
                 const grouped = {};
@@ -437,8 +445,9 @@
           </div>
         </div>`;
                 }).join('');
-                const seriesHtml = seriesCards ? `<p class="muted" style="margin:12px 0 6px;">Serie TV</p><div class="section-block"><div class="grid">${seriesCards}</div></div>` : '';
-                grid.innerHTML = `${moviesHtml}${seriesHtml}`;
+                const spacer = moviesHtml && seriesCards ? `<div style="height:18px;"></div>` : '';
+                const seriesHtml = seriesCards ? `<p class="section-title">Serie TV</p><div class="section-block"><div class="grid">${seriesCards}</div></div>` : '';
+                grid.innerHTML = `${moviesHtml}${spacer}${seriesHtml}`;
 
                 grid.querySelectorAll('button[data-season-header]').forEach(btn => {
                     btn.addEventListener('click', () => {
@@ -449,6 +458,8 @@
                     });
                 });
             } else {
+                grid.classList.add('grid');
+                grid.style.display = '';
                 grid.innerHTML = filtered.map(cardHTML).join('');
             }
             count.textContent = `${filtered.length} / ${items.length}`;
