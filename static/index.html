@@ -153,6 +153,7 @@
 
         .section-title {
             margin: 0 0 10px;
+            padding-top: 18px;
             font-weight: 700;
             font-size: 18px;
         }
@@ -201,8 +202,9 @@
             display: flex;
             flex-direction: column;
             gap: 10px;
-            flex: 1 1 auto;
-            min-height: 200px;
+            flex: 1 1 0;
+            min-height: 0;
+            max-height: calc(90vh - 80px);
         }
     </style>
 </head>
@@ -428,7 +430,7 @@
                 groupsArray.sort((a, b) => (b.lastDate || 0) - (a.lastDate || 0));
                 const moviesHtml = movies.length ? `<div class="section-block"><div class="grid">${movies.map(historyHTML).join('')}</div></div>` : '';
                 const seriesCards = groupsArray.map(g => {
-                    const header = `${escapeHtml(g.meta.seriesName || '')} ${escapeHtml(g.meta.seasonName || '')}`.trim();
+                    const header = `${escapeHtml(g.meta.seriesName || '')}`.trim();
                     const lastDateStr = g.lastDate ? new Date(g.lastDate * 1000).toLocaleString() : '—';
                     const cover = g.items[0]?.thumb
                       ? `<img src="${g.items[0].thumb}" alt="">`
