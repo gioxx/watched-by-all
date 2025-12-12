@@ -165,6 +165,8 @@ async def refresh_cache(force: bool = False) -> None:
 
         items = items_resp.get("Items", []) if isinstance(items_resp, dict) else (items_resp or [])
         for it in items:
+            show_id = ""
+            season_id = ""
             typ = (it.get("Type") or "").lower()
             if typ not in ("movie", "episode"):
                 continue
@@ -175,12 +177,11 @@ async def refresh_cache(force: bool = False) -> None:
 
             primary_tag = it.get("PrimaryImageTag") or (it.get("ImageTags") or {}).get("Primary") or ""
             series_primary_tag = it.get("SeriesPrimaryImageTag") or ""
-            series_id = it.get("SeriesId") or ""
             thumb_url = ""
             if primary_tag:
                 thumb_url = _jellyfin_thumb(item_id, primary_tag)
-            elif series_primary_tag and series_id:
-                thumb_url = _jellyfin_thumb(series_id, series_primary_tag)
+            elif series_primary_tag and it.get("SeriesId"):
+                thumb_url = _jellyfin_thumb(str(it.get("SeriesId")), series_primary_tag)
 
             ud = it.get("UserData", {}) or {}
             played_pct = 0.0
@@ -288,7 +289,7 @@ async def refresh_cache(force: bool = False) -> None:
                 "episodeTitle": it.get("Name") or "",
                 "episodeIndex": it.get("IndexNumber"),
                 "seasonIndex": it.get("ParentIndexNumber"),
-                "seriesId": show_id,
+                "seriesId": show_id or "",
                 "episodeId": item_id,
                 "jellyfinId": item_id,
                 "thumb": thumb_url,
