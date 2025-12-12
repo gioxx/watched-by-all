@@ -11,8 +11,8 @@
         .card { padding: 12px; }
         .season-block { margin-bottom: 22px; }
         .episode-list {
-            display: flex;
-            flex-direction: column;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
             gap: 10px;
         }
         .episode {
@@ -83,18 +83,12 @@
                 bySeason[key].push(ep);
             });
             Object.values(bySeason).forEach(arr => {
-                arr.sort((a,b) => {
-                    const sa = a.seasonIndex || 0, sb = b.seasonIndex || 0;
-                    if (sa !== sb) return sa - sb;
-                    const ea = a.episodeIndex || 0, eb = b.episodeIndex || 0;
-                    if (ea !== eb) return ea - eb;
-                    return (a.date || 0) - (b.date || 0);
-                });
+                arr.sort((a,b) => (b.date || 0) - (a.date || 0));
             });
             const seasons = Object.entries(bySeason).sort((a,b) => {
-                const sa = a[1][0]?.seasonIndex || 0;
-                const sb = b[1][0]?.seasonIndex || 0;
-                return sa - sb;
+                const la = a[1][0]?.date || 0;
+                const lb = b[1][0]?.date || 0;
+                return lb - la;
             });
             const container = document.getElementById('seasons');
             container.innerHTML = seasons.map(([name, eps]) => {
