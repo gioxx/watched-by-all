@@ -165,6 +165,7 @@ async def refresh_cache(force: bool = False) -> None:
 
         items = items_resp.get("Items", []) if isinstance(items_resp, dict) else (items_resp or [])
         for it in items:
+            series_thumb_url = ""
             show_id = ""
             season_id = ""
             typ = (it.get("Type") or "").lower()
@@ -232,7 +233,6 @@ async def refresh_cache(force: bool = False) -> None:
             elif typ == "episode":
                 show_id = str(it.get("SeriesId") or "").strip()
                 season_id = str(it.get("ParentId") or it.get("SeasonId") or "").strip()
-                series_thumb_url = ""
                 if series_primary_tag and show_id:
                     series_thumb_url = _jellyfin_thumb(show_id, series_primary_tag)
                 if show_id:
