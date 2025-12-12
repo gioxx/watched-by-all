@@ -9,10 +9,20 @@
     <style>
         h1 { margin: 0; font-size: 22px; }
         .card { padding: 12px; }
+        .season-block { margin-bottom: 22px; }
+        .episode-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
         .episode {
             display: flex;
-            gap: 10px;
+            gap: 12px;
             align-items: center;
+            border: 1px solid #1d2330;
+            border-radius: 12px;
+            padding: 10px;
+            background: #0b0f1c;
         }
         .episode-cover {
             width: 60px;
@@ -43,7 +53,7 @@
         </div>
     </header>
     <main>
-        <div id="grid" class="grid"></div>
+        <div id="seasons"></div>
     </main>
 
     <script>
@@ -86,8 +96,8 @@
                 const sb = b[1][0]?.seasonIndex || 0;
                 return sa - sb;
             });
-            const grid = document.getElementById('grid');
-            grid.innerHTML = seasons.map(([name, eps]) => {
+            const container = document.getElementById('seasons');
+            container.innerHTML = seasons.map(([name, eps]) => {
                 const lastDate = eps.reduce((m,e) => Math.max(m, e.date || 0), 0);
                 const lastDateStr = lastDate ? new Date(lastDate * 1000).toLocaleString() : '—';
                 const epiHtml = eps.map(e => {
@@ -95,7 +105,7 @@
                         ? `S${String(e.seasonIndex).padStart(2,'0')}E${String(e.episodeIndex).padStart(2,'0')}`
                         : '';
                     const when = e.date ? new Date(e.date * 1000).toLocaleString() : '—';
-                    const coverSrc = e.seriesThumb || e.thumb || e.jellyfinThumb || '';
+                    const coverSrc = e.thumb || e.jellyfinThumb || '';
                     const cover = coverSrc
                         ? `<img src="${coverSrc}" alt="">`
                         : `<span class="muted">No poster</span>`;
@@ -108,15 +118,15 @@
                         <div class="epi-sub">Viewed: ${when}</div>
                     </div>`;
                 }).join('');
-                return `<div class="card">
+                return `<div class="season-block">
                     <div class="season-head">
                         <div>
-                            <div class="epi-title">${name}</div>
+                            <div class="epi-title section-title" style="padding-top:0;">${name}</div>
                             <div class="epi-sub">Last viewed: ${lastDateStr}</div>
                         </div>
                         <div class="epi-sub">${eps.length} episode(s)</div>
                     </div>
-                    <div style="display:flex; flex-direction:column; gap:6px;">${epiHtml}</div>
+                    <div class="episode-list">${epiHtml}</div>
                 </div>`;
             }).join('');
 
