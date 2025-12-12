@@ -152,6 +152,46 @@
             color: #94a3b8;
             font-size: 12px;
         }
+
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,.55);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            z-index: 10;
+        }
+
+        .modal-panel {
+            background: #0f1320;
+            border: 1px solid #1d2330;
+            border-radius: 16px;
+            max-width: 900px;
+            width: 100%;
+            max-height: 90vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-header {
+            padding: 14px;
+            border-bottom: 1px solid #1d2330;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .modal-body {
+            padding: 14px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
     </style>
 </head>
 
@@ -212,6 +252,16 @@
         </div>
     </div>
 
+    <div id="historyModal" class="modal-backdrop">
+        <div class="modal-panel">
+            <div class="modal-header">
+                <div id="historyModalTitle" style="font-weight:700;"></div>
+                <button id="btnCloseHistory">Chiudi</button>
+            </div>
+            <div class="modal-body" id="historyModalBody"></div>
+        </div>
+    </div>
+
     <script>
         const grid = document.getElementById('grid');
         const summary = document.getElementById('summary');
@@ -232,6 +282,10 @@
         const btnForceRefresh = document.getElementById('btnForceRefresh');
         const historyControls = document.getElementById('historyControls');
         const historyUser = document.getElementById('historyUser');
+        const historyModal = document.getElementById('historyModal');
+        const historyModalTitle = document.getElementById('historyModalTitle');
+        const historyModalBody = document.getElementById('historyModalBody');
+        const btnCloseHistory = document.getElementById('btnCloseHistory');
 
         let allUsers = [];
         let selectedUserIds = new Set();
@@ -344,25 +398,38 @@
             const q = search.value.trim().toLowerCase();
             const filtered = q ? items.filter(i => (i.title || '').toLowerCase().includes(q)) : items;
             if (mode === 'history') {
-            const movies = filtered.filter(i => !i.seriesName);
-            const episodes = filtered.filter(i => i.seriesName);
-            const grouped = {};
-            episodes.forEach(e => {
-                const key = `${e.seriesName || 'Serie'}|${e.seasonName || ''}`;
-                if (!grouped[key]) grouped[key] = { meta: e, items: [] };
-                grouped[key].items.push(e);
-            });
-            const groupsHtml = Object.keys(grouped).map(k => {
-                const g = grouped[k];
-                const header = `${escapeHtml(g.meta.seriesName || '')} ${escapeHtml(g.meta.seasonName || '')}`.trim();
-                return `
+                const movies = filtered.filter(i => !i.seriesName);
+                const episodes = filtered.filter(i => i.seriesName);
+                const grouped = {};
+                episodes.forEach(e => {
+                    const key = `${e.seriesName || 'Serie'}|${e.seasonName || ''}`;
+                    if (!grouped[key]) grouped[key] = { meta: e, items: [] };
+                    grouped[key].items.push(e);
+                });
+                const groupsHtml = Object.keys(grouped).map(k => {
+                    const g = grouped[k];
+                    const header = `${escapeHtml(g.meta.seriesName || '')} ${escapeHtml(g.meta.seasonName || '')}`.trim();
+                    return `
           <div style="border:1px solid #1d2330; padding:10px; border-radius:12px; background:#0f1320; display:flex; flex-direction:column; gap:8px;">
-            <div style="font-weight:700;">${header}</div>
-            <div class="grid">${g.items.map(historyHTML).join('')}</div>
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+              <div style="font-weight:700;">${header}</div>
+              <button class="pill" data-season-header="${k}" style="padding:6px 10px;">Dettaglio episodi</button>
+            </div>
+            <div class="grid" data-season-grid="${k}" style="display:none;">${g.items.map(historyHTML).join('')}</div>
           </div>`;
-            }).join('');
-            const moviesHtml = movies.length ? movies.map(historyHTML).join('') : '';
-            grid.innerHTML = moviesHtml + groupsHtml;
+                }).join('');
+                const moviesHtml = movies.length ? movies.map(historyHTML).join('') : '';
+                grid.innerHTML = moviesHtml + groupsHtml;
+
+                // Attach click handlers for season detail
+                grid.querySelectorAll('button[data-season-header]').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const key = btn.getAttribute('data-season-header');
+                        const group = grouped[key];
+                        if (!group) return;
+                        openHistoryModal(`${group.meta.seriesName || ''} ${group.meta.seasonName || ''}`.trim(), group.items);
+                    });
+                });
             } else {
                 grid.innerHTML = filtered.map(cardHTML).join('');
             }
@@ -462,6 +529,20 @@
         btnForceRefresh.addEventListener('click', async () => {
             await forceRefresh();
         });
+
+        function openHistoryModal(title, epis) {
+            historyModalTitle.textContent = title || 'Dettaglio episodi';
+            historyModalBody.innerHTML = epis.map(historyHTML).join('');
+            historyModal.style.display = 'flex';
+        }
+
+        function closeHistoryModal() {
+            historyModal.style.display = 'none';
+            historyModalBody.innerHTML = '';
+        }
+
+        btnCloseHistory.addEventListener('click', closeHistoryModal);
+        historyModal.addEventListener('click', (e) => { if (e.target === historyModal) closeHistoryModal(); });
 
         historyUser.addEventListener('change', async () => {
             if (mode === 'history') {
