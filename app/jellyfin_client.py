@@ -29,7 +29,7 @@ class JellyfinClient:
             IncludeItemTypes="Movie,Episode",
             Recursive=True,
             SortBy="DatePlayed",
-            Fields="ProviderIds,SeriesId,ParentId,UserData,PrimaryImageTag,SeriesPrimaryImageTag,ImageTags,RunTimeTicks,OfficialRating,CommunityRating",
+            Fields="ProviderIds,SeriesId,ParentId,UserData,PrimaryImageTag,SeriesPrimaryImageTag,ImageTags,RunTimeTicks,OfficialRating,CommunityRating,IndexNumber,ParentIndexNumber",
             EnableTotalRecordCount=False,
         )
 

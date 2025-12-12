@@ -374,6 +374,9 @@
         function historyHTML(it) {
             const date = it.date ? new Date(it.date * 1000).toLocaleString() : '—';
             const thumb = it.thumb || it.jellyfinThumb || '';
+            const code = (it.seasonIndex != null && it.episodeIndex != null)
+              ? `S${String(it.seasonIndex).padStart(2,'0')}E${String(it.episodeIndex).padStart(2,'0')}`
+              : '';
             const subtitle = it.seriesName ? `${escapeHtml(it.seriesName)} · ${escapeHtml(it.seasonName || '')}` : '';
             return `
         <div class="card">
@@ -382,7 +385,7 @@
           </div>
           <div class="meta">
             <div class="title">${subtitle || escapeHtml(it.title || '')}</div>
-            <div class="muted">Viewed: ${date}</div>
+            <div class="muted">${escapeHtml(code)} Viewed: ${date}</div>
           </div>
         </div>
       `;
@@ -400,24 +403,28 @@
             if (mode === 'history') {
                 const movies = filtered.filter(i => !i.seriesName);
                 const episodes = filtered.filter(i => i.seriesName);
-                const grouped = {};
-                episodes.forEach(e => {
-                    const key = `${e.seriesName || 'Serie'}|${e.seasonName || ''}`;
-                    if (!grouped[key]) grouped[key] = { meta: e, items: [] };
-                    grouped[key].items.push(e);
-                });
-                const groupsHtml = Object.keys(grouped).map(k => {
-                    const g = grouped[k];
-                    const header = `${escapeHtml(g.meta.seriesName || '')} ${escapeHtml(g.meta.seasonName || '')}`.trim();
-                    return `
+            const grouped = {};
+            episodes.forEach(e => {
+                const key = `${e.seriesName || 'Serie'}|${e.seasonName || ''}`;
+                if (!grouped[key]) grouped[key] = { meta: e, items: [] };
+                grouped[key].items.push(e);
+            });
+            const groupsHtml = Object.keys(grouped).map(k => {
+                const g = grouped[k];
+                const header = `${escapeHtml(g.meta.seriesName || '')} ${escapeHtml(g.meta.seasonName || '')}`.trim();
+                const cover = g.items[0]?.thumb ? `<img src="${g.items[0].thumb}" alt="" style="width:48px; height:70px; object-fit:cover; border-radius:8px; border:1px solid #1d2330;">` : `<div style="width:48px; height:70px; border-radius:8px; border:1px solid #1d2330; display:flex; align-items:center; justify-content:center;" class="muted">No poster</div>`;
+                return `
           <div style="border:1px solid #1d2330; padding:10px; border-radius:12px; background:#0f1320; display:flex; flex-direction:column; gap:8px;">
             <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
-              <div style="font-weight:700;">${header}</div>
+              <div style="display:flex; align-items:center; gap:8px;">
+                ${cover}
+                <div style="font-weight:700;">${header}</div>
+              </div>
               <button class="pill" data-season-header="${k}" style="padding:6px 10px;">Dettaglio episodi</button>
             </div>
             <div class="grid" data-season-grid="${k}" style="display:none;">${g.items.map(historyHTML).join('')}</div>
           </div>`;
-                }).join('');
+            }).join('');
                 const moviesHtml = movies.length ? movies.map(historyHTML).join('') : '';
                 grid.innerHTML = moviesHtml + groupsHtml;
 
