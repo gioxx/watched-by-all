@@ -5,6 +5,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Jellyfin - Watched by Everyone</title>
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
     <style>
         :root {
             color-scheme: dark;
@@ -156,7 +157,10 @@
 
 <body>
     <header>
-        <div class="brand">Watched (Jellyfin - Watched by Everyone)</div>
+        <div class="brand" style="display:flex; align-items:center; gap:8px;">
+            <img src="/static/favicon.svg" alt="" width="22" height="22" aria-hidden="true" />
+            <span>Watched (Jellyfin - Watched by Everyone)</span>
+        </div>
         <div style="display:flex; gap:8px; align-items:center;">
             <button id="btnUsers" class="pill" style="cursor:pointer;">Utenti</button>
             <div id="summary" class="pill">Loading…</div>
