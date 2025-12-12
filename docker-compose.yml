@@ -1,7 +1,7 @@
 services:
-  watched-by-all:
+  jellyfin-watched-by-all:
     build: .
-    container_name: plex-watched-by-all
+    container_name: jellyfin-watched-by-all
     ports:
       - "8088:8088"
     environment:

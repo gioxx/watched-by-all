@@ -23,8 +23,10 @@ class Cache:
 
     # Show keys seen in history (grandparent/show rating key)
     shows: Set[str] = field(default_factory=set)
+    # Season keys seen in history
+    seasons: Set[str] = field(default_factory=set)
 
-    # Plex episode list per show
+    # Episode list per show
     show_episodes: Dict[str, List[str]] = field(default_factory=dict)
 
     # Per-user progress
@@ -32,7 +34,9 @@ class Cache:
     user_movie_progress: Dict[str, Dict[str, Dict[str, Any]]] = field(default_factory=dict)
     # Shows: user_id -> show_rating_key -> set(episode_rating_keys completed)
     user_show_episodes: Dict[str, Dict[str, Set[str]]] = field(default_factory=dict)
-    # Watched history per user (merged Plex/Jellyfin events)
+    # Seasons: user_id -> season_id -> set(episode_ids completed)
+    user_season_episodes: Dict[str, Dict[str, Set[str]]] = field(default_factory=dict)
+    # Watched history per user (Jellyfin events)
     user_history: Dict[str, List[Dict[str, Any]]] = field(default_factory=dict)
     # Jellyfin users cache (id -> name)
     jellyfin_users: Dict[str, str] = field(default_factory=dict)
@@ -41,7 +45,7 @@ class Cache:
 
     # Precomputed results
     movies_by_all: List[str] = field(default_factory=list)   # rating keys
-    shows_by_all: List[str] = field(default_factory=list)    # show rating keys
+    shows_by_all: List[str] = field(default_factory=list)    # season ids
 
     def is_stale(self, refresh_minutes: int) -> bool:
         if self.last_refresh_ts <= 0:

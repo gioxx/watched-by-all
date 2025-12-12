@@ -31,7 +31,7 @@ app = FastAPI(title="Jellyfin Watched-By-All Dashboard")
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-logger = logging.getLogger("plex-watched-by-all")
+logger = logging.getLogger("jellyfin-watched-by-all")
 
 
 def _effective_user_ids() -> List[str]:
@@ -104,6 +104,19 @@ async def _jellyfin_show_episode_keys(show_id: str) -> List[str]:
         return []
 
 
+async def _jellyfin_season_episode_keys(season_id: str) -> List[str]:
+    if season_id in cache.show_episodes:
+        return cache.show_episodes[season_id]
+    try:
+        resp = await jellyfin.get_season_episodes(season_id)
+        items = resp.get("Items", []) if isinstance(resp, dict) else (resp or [])
+        eps = [str(e.get("Id")) for e in items if e.get("Id")]
+        cache.show_episodes[season_id] = eps
+        return eps
+    except Exception:
+        return []
+
+
 async def _show_episode_keys(show_rating_key: str) -> List[str]:
     if cache.show_episodes.get(show_rating_key):
         return cache.show_episodes[show_rating_key]
@@ -119,10 +132,12 @@ async def refresh_cache(force: bool = False) -> None:
     cache.completed.clear()
     cache.movies.clear()
     cache.shows.clear()
+    cache.seasons.clear()
     cache.movies_by_all.clear()
     cache.shows_by_all.clear()
     cache.user_movie_progress.clear()
     cache.user_show_episodes.clear()
+    cache.user_season_episodes.clear()
     cache.user_history.clear()
     cache.jellyfin_users.clear()
     cache.jellyfin_meta.clear()
@@ -192,19 +207,33 @@ async def refresh_cache(force: bool = False) -> None:
 
             elif typ == "episode":
                 show_id = str(it.get("SeriesId") or "").strip()
+                season_id = str(it.get("ParentId") or it.get("SeasonId") or "").strip()
                 if show_id:
                     cache.shows.add(show_id)
+                if season_id:
+                    cache.seasons.add(season_id)
                 if is_completed:
                     cache.completed.add((juid, item_id))
                 if show_id and is_completed:
                     cache.user_show_episodes.setdefault(juid, {})
                     cache.user_show_episodes[juid].setdefault(show_id, set()).add(item_id)
+                if season_id and is_completed:
+                    cache.user_season_episodes.setdefault(juid, {})
+                    cache.user_season_episodes[juid].setdefault(season_id, set()).add(item_id)
                 if show_id and show_id not in cache.jellyfin_meta:
                     cache.jellyfin_meta[show_id] = {
                         "ratingKey": show_id,
                         "title": it.get("SeriesName") or "",
                         "year": "",
                         "type": "show",
+                        "thumb": thumb_url,
+                    }
+                if season_id and season_id not in cache.jellyfin_meta:
+                    cache.jellyfin_meta[season_id] = {
+                        "ratingKey": season_id,
+                        "title": f"{it.get('SeriesName') or ''} {it.get('SeasonName') or ''}".strip(),
+                        "year": "",
+                        "type": "season",
                         "thumb": thumb_url,
                     }
 
@@ -243,10 +272,10 @@ async def refresh_cache(force: bool = False) -> None:
             movies_by_all.append(mk)
     cache.movies_by_all = sorted(movies_by_all, key=lambda x: int(x) if x.isdigit() else x)
 
-    # Shows watched by all (ALL episodes watched by ALL users)
-    shows_by_all: List[str] = []
-    for sk in cache.shows:
-        eps = await _show_episode_keys(sk)
+    # Seasons watched by all (ALL episodes in the season watched by ALL users)
+    seasons_by_all: List[str] = []
+    for season_id in cache.seasons:
+        eps = await _jellyfin_season_episode_keys(season_id)
         if not eps:
             continue
         ok = True
@@ -258,8 +287,8 @@ async def refresh_cache(force: bool = False) -> None:
             if not ok:
                 break
         if ok:
-            shows_by_all.append(sk)
-    cache.shows_by_all = sorted(shows_by_all, key=lambda x: int(x) if x.isdigit() else x)
+            seasons_by_all.append(season_id)
+    cache.shows_by_all = sorted(seasons_by_all, key=lambda x: int(x) if x.isdigit() else x)
 
     cache.last_refresh_ts = time.time()
 
@@ -393,12 +422,12 @@ async def user_items(user_id: str):
         movies_resp.append(md)
 
     shows_resp: List[Dict[str, Any]] = []
-    user_shows = cache.user_show_episodes.get(user_id, {})
-    for show_rk, eps_seen in user_shows.items():
-        total_eps = await _show_episode_keys(show_rk)
+    user_seasons = cache.user_season_episodes.get(user_id, {})
+    for season_id, eps_seen in user_seasons.items():
+        total_eps = await _jellyfin_season_episode_keys(season_id)
         total = len(total_eps)
         watched = len(eps_seen)
-        md = await _item_title_thumb(show_rk)
+        md = await _item_title_thumb(season_id)
         if md is None:
             continue
         md.update(

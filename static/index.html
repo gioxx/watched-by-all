@@ -156,7 +156,7 @@
     <main>
         <div class="tabs">
             <button id="tabMovies" class="active">Film</button>
-            <button id="tabShows">Serie (complete)</button>
+            <button id="tabShows">Stagioni (complete)</button>
             <button id="tabHistory">Storico utente</button>
         </div>
 
@@ -168,7 +168,7 @@
 
         <div id="historyControls" class="row" style="display:none;">
             <select id="historyUser" style="background:#0f1320; color:#e9eef5; border:1px solid #1d2330; padding:10px 12px; border-radius:12px; min-width:240px;"></select>
-            <span class="muted">Seleziona l'utente per vedere tutto ciò che ha visto (Plex + Jellyfin).</span>
+            <span class="muted">Seleziona l'utente per vedere tutto ciò che ha visto (Jellyfin).</span>
         </div>
 
         <div id="grid" class="grid"></div>
@@ -188,7 +188,7 @@
             <div style="padding:14px 14px; display:flex; flex-direction:column; gap:10px;">
                 <div class="muted">Se non selezioni nessuno, verranno considerati <b>tutti</b> gli utenti.</div>
                 <div id="usersList" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap:10px;"></div>
-                <div class="muted">Utenti Jellyfin rilevati (per mappare con Plex):</div>
+                <div class="muted">Utenti Jellyfin rilevati:</div>
                 <div id="jellyfinList" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap:10px;"></div>
                 <div style="display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap; padding-top:6px;">
                     <button id="btnSelectAll">Seleziona tutti</button>
@@ -300,7 +300,7 @@
           </div>
           <div class="meta">
             <div class="title">${escapeHtml(it.title)}${escapeHtml(year)}</div>
-            <div class="sub">${escapeHtml(type)} · ratingKey ${escapeHtml(it.ratingKey)}</div>
+            <div class="sub">${escapeHtml(type)}</div>
           </div>
         </div>
       `;
@@ -308,20 +308,18 @@
 
         function historyHTML(it) {
             const date = it.date ? new Date(it.date * 1000).toLocaleString() : '—';
-            const source = it.source || '';
-            const type = it.type || '';
             const percent = typeof it.percent === 'number' ? Math.round(it.percent * 100) : (it.percent || 0);
             const completed = it.completed ? '✅' : '';
             const thumb = it.thumb || it.jellyfinThumb || '';
-            const subtitle = it.seriesName ? `${escapeHtml(it.seriesName)} · ${escapeHtml(it.title || '')}` : escapeHtml(it.title || '');
+            const subtitle = it.seriesName ? `${escapeHtml(it.seriesName)} · ${escapeHtml(it.seasonName || '')}` : '';
             return `
         <div class="card">
           <div class="poster">
             ${thumb ? `<img src="${thumb}" alt="">` : `<span class="muted">No poster</span>`}
           </div>
           <div class="meta">
-            <div class="title">${subtitle}</div>
-            <div class="sub">${escapeHtml(type)} · ${escapeHtml(source)} ${completed}</div>
+            <div class="title">${subtitle || escapeHtml(it.title || '')}</div>
+            <div class="sub">${completed}</div>
             <div class="muted">Viewed: ${date} · ${percent}%</div>
           </div>
         </div>
@@ -338,7 +336,25 @@
             const q = search.value.trim().toLowerCase();
             const filtered = q ? items.filter(i => (i.title || '').toLowerCase().includes(q)) : items;
             if (mode === 'history') {
-                grid.innerHTML = filtered.map(historyHTML).join('');
+                const movies = filtered.filter(i => !i.seriesName);
+                const episodes = filtered.filter(i => i.seriesName);
+                const grouped = {};
+                episodes.forEach(e => {
+                    const key = `${e.seriesName || 'Serie'}|${e.seasonName || ''}`;
+                    if (!grouped[key]) grouped[key] = { meta: e, items: [] };
+                    grouped[key].items.push(e);
+                });
+                const groupsHtml = Object.keys(grouped).map(k => {
+                    const g = grouped[k];
+                    const header = `${escapeHtml(g.meta.seriesName || '')} ${escapeHtml(g.meta.seasonName || '')}`.trim();
+                    return `
+          <div style="border:1px solid #1d2330; padding:10px; border-radius:12px; background:#0f1320; display:flex; flex-direction:column; gap:8px;">
+            <div style="font-weight:700;">${header}</div>
+            <div class="grid">${g.items.map(historyHTML).join('')}</div>
+          </div>`;
+                }).join('');
+                const moviesHtml = movies.length ? movies.map(historyHTML).join('') : '';
+                grid.innerHTML = moviesHtml + groupsHtml;
             } else {
                 grid.innerHTML = filtered.map(cardHTML).join('');
             }
@@ -349,7 +365,7 @@
             const r = await fetch('/api/summary');
             const s = await r.json();
             const date = s.lastRefresh ? new Date(s.lastRefresh * 1000).toLocaleString() : '—';
-            summary.textContent = `${s.users} utenti · ${s.moviesByAll} film · ${s.showsByAll} serie · aggiornato: ${date}`;
+            summary.textContent = `${s.users} utenti · ${s.moviesByAll} film · ${s.showsByAll} stagioni · aggiornato: ${date}`;
         }
 
         async function loadItems() {
