@@ -191,6 +191,7 @@
             display: flex;
             flex-direction: column;
             gap: 10px;
+            max-height: 70vh;
         }
     </style>
 </head>
@@ -432,7 +433,7 @@
           </div>`;
                 }).join('');
                 const moviesHtml = movies.length ? movies.map(historyHTML).join('') : '';
-                const seriesHtml = groupsHtml ? `<div class="muted" style="margin:8px 0 4px;">Serie TV</div>${groupsHtml}` : '';
+                const seriesHtml = groupsHtml ? `<h2 style="margin:12px 0 6px; font-size:18px;">Serie TV</h2>${groupsHtml}` : '';
                 grid.innerHTML = moviesHtml + seriesHtml;
 
                 // Attach click handlers for season detail
