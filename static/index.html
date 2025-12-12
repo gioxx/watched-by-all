@@ -89,6 +89,10 @@
             gap: 10px;
         }
 
+        .section-block {
+            width: 100%;
+        }
+
         .card {
             border: 1px solid #1d2330;
             border-radius: 16px;
@@ -433,8 +437,8 @@
             <div class="grid" data-season-grid="${g.key}" style="display:none;">${g.items.map(historyHTML).join('')}</div>
           </div>`;
                 }).join('');
-                const moviesHtml = movies.length ? movies.map(historyHTML).join('') : '';
-                const seriesHtml = groupsHtml ? `<p class="muted" style="margin:12px 0 6px;">Serie TV</p><div class="grid">${groupsHtml}</div>` : '';
+                const moviesHtml = movies.length ? `<div class="section-block"><div class="grid">${movies.map(historyHTML).join('')}</div></div>` : '';
+                const seriesHtml = groupsHtml ? `<div class="section-block" style="margin-top:12px;"><p class="muted" style="margin:0 0 6px;">Serie TV</p><div class="grid">${groupsHtml}</div></div>` : '';
                 grid.innerHTML = `${moviesHtml}${seriesHtml}`;
 
                 // Attach click handlers for season detail
