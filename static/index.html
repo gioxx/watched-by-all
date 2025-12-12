@@ -292,7 +292,7 @@
 
         function cardHTML(it) {
             const year = it.year ? ` (${it.year})` : '';
-            const type = it.type ? it.type : '';
+            const runtime = it.runtimeMinutes ? `${it.runtimeMinutes} min` : '';
             return `
         <div class="card">
           <div class="poster">
@@ -300,7 +300,7 @@
           </div>
           <div class="meta">
             <div class="title">${escapeHtml(it.title)}${escapeHtml(year)}</div>
-            <div class="sub">${escapeHtml(type)}</div>
+            <div class="sub">${escapeHtml(runtime)}</div>
           </div>
         </div>
       `;

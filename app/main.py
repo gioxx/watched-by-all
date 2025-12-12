@@ -197,12 +197,20 @@ async def refresh_cache(force: bool = False) -> None:
                 entry["percent"] = max(entry.get("percent", 0.0), played_pct)
                 entry["completed"] = bool(entry.get("completed")) or is_completed
 
+                runtime_ticks = it.get("RunTimeTicks") or 0
+                runtime_minutes = 0
+                try:
+                    runtime_minutes = int(int(runtime_ticks) / 10_000_000 / 60)
+                except Exception:
+                    runtime_minutes = 0
+
                 cache.jellyfin_meta[item_id] = {
                     "ratingKey": item_id,
                     "title": it.get("Name") or "",
                     "year": str(it.get("ProductionYear") or ""),
                     "type": "movie",
                     "thumb": thumb_url,
+                    "runtimeMinutes": runtime_minutes,
                 }
 
             elif typ == "episode":
