@@ -17,11 +17,11 @@
         </div>
         <div style="display:flex; gap:8px; align-items:center;">
             <select id="langSelect" class="pill" style="cursor:pointer; background:#0f1320; color:#e9eef5; border-radius:12px;">
-                <option value="en">English</option>
-                <option value="it">Italiano</option>
+                <option value="en">🌐 English</option>
+                <option value="it">🌐 Italiano</option>
             </select>
-            <button id="btnUsers" class="pill" style="cursor:pointer;">Users</button>
-            <div id="summary" class="pill">Loading…</div>
+            <button id="btnUsers" class="pill" style="cursor:pointer;">👥 Users</button>
+            <div id="summary" class="pill">ℹ️ Loading…</div>
         </div>
     </header>
 
@@ -142,7 +142,7 @@
             tabHistory.textContent = t('tab.history');
             search.placeholder = t('search.placeholder');
             refreshBtn.textContent = t('button.refresh');
-            btnUsers.textContent = t('header.users');
+            btnUsers.textContent = `${t('header.usersIcon')} ${t('header.users')}`;
             document.getElementById('historyControls').querySelector('.muted').textContent = t('history.helper');
             document.querySelector('.footer').innerHTML = t('footer.text');
 
@@ -157,6 +157,11 @@
             btnForceRefresh.textContent = t('usersModal.force');
 
             langSelect.value = currentLang;
+            // Keep icons inside select options
+            langSelect.querySelectorAll('option').forEach(opt => {
+                if (opt.value === 'en') opt.textContent = `${t('header.langIcon')} English`;
+                if (opt.value === 'it') opt.textContent = `${t('header.langIcon')} Italiano`;
+            });
         }
 
         let allUsers = [];
@@ -335,7 +340,7 @@
             const r = await fetch('/api/summary');
             const s = await r.json();
             const date = s.lastRefresh ? new Date(s.lastRefresh * 1000).toLocaleString() : '—';
-            summary.textContent = t('summary.template', { users: s.users, movies: s.moviesByAll, seasons: s.showsByAll, date });
+            summary.textContent = `${t('header.summaryIcon')} ${t('summary.template', { users: s.users, movies: s.moviesByAll, seasons: s.showsByAll, date })}`;
         }
 
         async function loadItems() {

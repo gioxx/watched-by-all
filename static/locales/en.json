@@ -1,6 +1,9 @@
 {
   "title": "Watched (Jellyfin - Watched by Everyone)",
   "header.users": "Users",
+  "header.summaryIcon": "ℹ️",
+  "header.usersIcon": "👥",
+  "header.langIcon": "🌐",
   "tab.movies": "Movies",
   "tab.shows": "Seasons (complete)",
   "tab.history": "User history",

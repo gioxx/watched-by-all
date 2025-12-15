@@ -30,6 +30,8 @@ class Cache:
     show_episodes: Dict[str, List[str]] = field(default_factory=dict)
     # Season runtime minutes aggregate
     season_runtime_minutes: Dict[str, int] = field(default_factory=dict)
+    # Last viewed timestamp per season
+    season_last_view: Dict[str, float] = field(default_factory=dict)
     # Track episodes already accounted for per season to avoid double counting
     season_episode_seen: Dict[str, Set[str]] = field(default_factory=dict)
 

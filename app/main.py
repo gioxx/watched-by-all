@@ -143,6 +143,7 @@ async def refresh_cache(force: bool = False) -> None:
     cache.jellyfin_meta.clear()
     cache.season_runtime_minutes.clear()
     cache.season_episode_seen.clear()
+    cache.season_last_view.clear()
 
     try:
         jf_users = await jellyfin.get_users()
@@ -191,6 +192,7 @@ async def refresh_cache(force: bool = False) -> None:
             except Exception:
                 played_pct = 0.0
             is_completed = bool(ud.get("Played")) or played_pct >= WATCH_THRESHOLD
+            date_ts = _ts_from_iso(ud.get("LastPlayedDate")) if isinstance(ud, dict) else 0.0
 
             if typ == "movie":
                 cache.movies.add(item_id)
@@ -276,6 +278,8 @@ async def refresh_cache(force: bool = False) -> None:
                     if item_id not in seen:
                         seen.add(item_id)
                         cache.season_runtime_minutes[season_id] = cache.season_runtime_minutes.get(season_id, 0) + runtime_minutes
+                if season_id and date_ts:
+                    cache.season_last_view[season_id] = max(cache.season_last_view.get(season_id, 0.0), date_ts)
 
             event = {
                 "source": "jellyfin",
@@ -284,7 +288,7 @@ async def refresh_cache(force: bool = False) -> None:
                 "providerKey": _provider_key_from_ids(it.get("ProviderIds", {})),
                 "percent": played_pct,
                 "completed": is_completed,
-                "date": _ts_from_iso(ud.get("LastPlayedDate")) if isinstance(ud, dict) else 0.0,
+                "date": date_ts,
                 "title": it.get("Name") or "",
                 "year": it.get("ProductionYear") or "",
                 "seriesName": it.get("SeriesName") or "",
@@ -440,7 +444,9 @@ async def shows():
         it = await _item_title_thumb(rk)
         if it is not None:
             it["runtimeMinutes"] = cache.season_runtime_minutes.get(rk, 0)
+            it["lastViewed"] = cache.season_last_view.get(rk, 0.0)
             items.append(it)
+    items.sort(key=lambda x: x.get("lastViewed", 0) or 0, reverse=True)
     return JSONResponse({"items": items})
 
 
