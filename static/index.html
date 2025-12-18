@@ -20,6 +20,7 @@
                 <option value="en">EN</option>
                 <option value="it">IT</option>
             </select>
+            <button id="themeToggle" class="pill icon-btn" type="button" aria-label="Toggle theme">🌙</button>
             <button id="btnUsers" class="pill" style="cursor:pointer;">👥 Users</button>
             <div id="summary" class="pill">ℹ️ Loading…</div>
         </div>
@@ -96,8 +97,8 @@
             return Object.keys(vars).reduce((acc, k) => acc.replace(new RegExp(`{${k}}`, 'g'), vars[k]), base);
         }
 
-        const savedTheme = localStorage.getItem('theme') || 'dark';
-        document.body.setAttribute('data-theme', savedTheme);
+        let currentTheme = localStorage.getItem('theme') || 'dark';
+        document.body.setAttribute('data-theme', currentTheme);
 
         const grid = document.getElementById('grid');
         const summary = document.getElementById('summary');
@@ -123,6 +124,7 @@
         const historyModalTitle = document.getElementById('historyModalTitle');
         const historyModalBody = document.getElementById('historyModalBody');
         const btnCloseHistory = document.getElementById('btnCloseHistory');
+        const themeToggle = document.getElementById('themeToggle');
 
         async function loadLang(lang) {
             currentLang = lang;
@@ -163,10 +165,24 @@
             langSelect.querySelectorAll('option').forEach(opt => {
                 opt.textContent = (opt.value || '').toUpperCase();
             });
+
+            if (themeToggle) {
+                themeToggle.setAttribute('aria-label', currentTheme === 'light' ? t('theme.dark') : t('theme.light'));
+            }
         }
 
         let allUsers = [];
         let selectedUserIds = new Set();
+
+        function applyTheme(theme) {
+            currentTheme = theme === 'light' ? 'light' : 'dark';
+            document.body.setAttribute('data-theme', currentTheme);
+            localStorage.setItem('theme', currentTheme);
+            if (themeToggle) {
+                themeToggle.textContent = currentTheme === 'light' ? '☀️' : '🌙';
+                themeToggle.setAttribute('aria-label', currentTheme === 'light' ? t('theme.dark') : t('theme.light'));
+            }
+        }
 
         function openUsers() { usersModal.style.display = 'block'; }
         function closeUsers() { usersModal.style.display = 'none'; }
@@ -437,6 +453,10 @@
             await loadItems();
         });
 
+        themeToggle.addEventListener('click', () => {
+            applyTheme(currentTheme === 'light' ? 'dark' : 'light');
+        });
+
         function openHistoryModal(title, epis) {
             historyModalTitle.textContent = title || 'Dettaglio episodi';
             historyModalBody.innerHTML = epis.map(historyHTML).join('');
@@ -460,6 +480,7 @@
         (async () => {
             const storedLang = localStorage.getItem('lang') || 'en';
             await loadLang(storedLang);
+            applyTheme(currentTheme);
             await loadSummary();
             try { await loadUsers(); } catch (e) { }
             await loadItems();
