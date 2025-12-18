@@ -81,6 +81,18 @@ body[data-theme="light"] header {
     border-radius: 999px;
     color: var(--text);
     background: var(--surface-strong);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+.pill svg {
+    width: 18px;
+    height: 18px;
+    display: block;
+    fill: currentColor;
 }
 
 main {
