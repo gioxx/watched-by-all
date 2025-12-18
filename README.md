@@ -34,7 +34,7 @@ When published, you can pull instead of building locally:
 docker pull ghcr.io/gioxx/watched-by-all:latest
 
 # or Docker Hub
-docker pull gioxx/watched-by-all:latest
+docker pull gfsolone/watched-by-all:latest
 
 docker run -d --name watched \
   -p 8088:8088 \
