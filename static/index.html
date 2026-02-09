@@ -240,7 +240,9 @@
                 setBackendStatus('', false);
             } catch (e) {
                 setBackendStatus(t('loadingError') || '⚠️ Jellyfin unreachable. Retry.', true);
-                throw e;
+                allUsers = [];
+                selectedUserIds = new Set();
+                renderUsers();
             }
 
             // Populate history select
@@ -392,7 +394,7 @@
                 setBackendStatus('', false);
             } catch (e) {
                 setBackendStatus(t('loadingError') || '⚠️ Jellyfin unreachable. Retry.', true);
-                throw e;
+                summary.textContent = `${t('header.summaryIcon')} —`;
             }
         }
 
@@ -408,28 +410,35 @@
                     render();
                     return;
                 }
-                const r = await fetch(`/api/user/${encodeURIComponent(historyUser.value)}/history`);
-                if (!r.ok) {
+                try {
+                    const r = await fetch(`/api/user/${encodeURIComponent(historyUser.value)}/history`);
+                    if (!r.ok) throw new Error('history');
+                    const data = await r.json();
+                    items = data.items || [];
+                    render();
+                    setBackendStatus('', false);
+                    return;
+                } catch (e) {
                     setBackendStatus(t('loadingError') || '⚠️ Jellyfin unreachable. Retry.', true);
-                    throw new Error('history');
+                    items = [];
+                    render();
+                    return;
                 }
+            }
+
+            const url = mode === 'movies' ? '/api/movies' : '/api/shows';
+            try {
+                const r = await fetch(url);
+                if (!r.ok) throw new Error('items');
                 const data = await r.json();
                 items = data.items || [];
                 render();
                 setBackendStatus('', false);
-                return;
-            }
-
-            const url = mode === 'movies' ? '/api/movies' : '/api/shows';
-            const r = await fetch(url);
-            if (!r.ok) {
+            } catch (e) {
                 setBackendStatus(t('loadingError') || '⚠️ Jellyfin unreachable. Retry.', true);
-                throw new Error('items');
+                items = [];
+                render();
             }
-            const data = await r.json();
-            items = data.items || [];
-            render();
-            setBackendStatus('', false);
         }
 
         tabMovies.addEventListener('click', async () => {
