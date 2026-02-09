@@ -22,6 +22,11 @@ Environment variables (see `docker-compose.yml`):
 - `REFRESH_MINUTES` (optional, default `30`): minimum minutes between automatic refreshes of cached data.
 - `PROXY_IMAGES` (optional, default `true`): when `true`, posters are proxied through this app to avoid mixed-content or private-host issues (useful behind HTTPS/CDN tunnels).
 - `IMAGE_CACHE_SECONDS` (optional, default `86400`): cache-control duration for proxied images.
+- `JELLYFIN_TIMEOUT` (optional, default `5`): per-request timeout (seconds) for Jellyfin API and image proxy.
+- `THUMB_CACHE_DIR` (optional, default `thumb_cache`): local folder for cached posters, served at `/thumbs/*`.
+- `THUMB_CACHE_TTL_HOURS` (optional, default `72`): recache posters after N hours; `0` disables expiry.
+- `THUMB_FETCH_TIMEOUT` (optional, default `5`): timeout for downloading posters into the cache.
+- `INTERNAL_HTTP_BASE` (optional, default `http://127.0.0.1:8088`): base URL used internally to fetch `/image/...` when caching thumbs.
 
 ## Run (Docker)
 ```sh
