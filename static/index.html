@@ -331,7 +331,16 @@
             if (mode === 'history') {
                 grid.classList.remove('grid');
                 grid.style.display = 'block';
-                const movies = filtered.filter(i => !i.seriesName);
+                const moviesRaw = filtered.filter(i => !i.seriesName);
+                const movieMap = new Map();
+                moviesRaw.forEach(m => {
+                    const key = m.ratingKey || m.providerKey || m.title || JSON.stringify(m);
+                    const prev = movieMap.get(key);
+                    if (!prev || (m.date || 0) > (prev.date || 0)) {
+                        movieMap.set(key, m);
+                    }
+                });
+                const movies = Array.from(movieMap.values()).sort((a, b) => (b.date || 0) - (a.date || 0));
                 const episodes = filtered.filter(i => i.seriesName);
                 const grouped = {};
                 episodes.forEach(e => {
