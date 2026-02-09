@@ -7,7 +7,8 @@ import time
 from datetime import datetime
 from typing import Any, Dict, List
 
-from fastapi import FastAPI, Body
+import httpx
+from fastapi import Body, FastAPI, Response
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -20,6 +21,8 @@ JELLYFIN_APIKEY = os.environ.get("JELLYFIN_APIKEY", "").strip()
 
 WATCH_THRESHOLD = float(os.environ.get("WATCH_THRESHOLD", "0.95"))
 REFRESH_MINUTES = int(os.environ.get("REFRESH_MINUTES", "30"))
+PROXY_IMAGES = os.environ.get("PROXY_IMAGES", "true").strip().lower() in ("1", "true", "yes", "on")
+IMAGE_CACHE_SECONDS = int(os.environ.get("IMAGE_CACHE_SECONDS", "86400"))
 
 if not (JELLYFIN_URL and JELLYFIN_APIKEY):
     raise RuntimeError("Missing required env vars: JELLYFIN_URL, JELLYFIN_APIKEY")
@@ -80,7 +83,11 @@ def _ts_from_iso(val: str) -> float:
 
 
 def _jellyfin_thumb(item_id: str, tag: str) -> str:
-    if not (JELLYFIN_URL and JELLYFIN_APIKEY and item_id and tag):
+    if not (item_id and tag):
+        return ""
+    if PROXY_IMAGES:
+        return f"/image/{item_id}?tag={tag}"
+    if not (JELLYFIN_URL and JELLYFIN_APIKEY):
         return ""
     return f"{JELLYFIN_URL}/Items/{item_id}/Images/Primary?tag={tag}&X-Emby-Token={JELLYFIN_APIKEY}"
 
@@ -370,6 +377,30 @@ async def _startup() -> None:
 async def index():
     with open("static/index.html", "r", encoding="utf-8") as f:
         return f.read()
+
+
+@app.get("/image/{item_id}")
+async def image_proxy(item_id: str, tag: str):
+    """Proxy Jellyfin images to avoid mixed-content or private-host issues."""
+    if not tag:
+        return JSONResponse({"error": "tag is required"}, status_code=400)
+
+    url = f"{JELLYFIN_URL}/Items/{item_id}/Images/Primary"
+    headers = {"X-Emby-Token": JELLYFIN_APIKEY}
+    params = {"tag": tag}
+
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            r = await client.get(url, headers=headers, params=params)
+            r.raise_for_status()
+    except Exception as exc:
+        logger.warning("Image proxy failed for %s (%s): %s", item_id, tag, exc)
+        return JSONResponse({"error": "image fetch failed"}, status_code=502)
+
+    media_type = r.headers.get("content-type", "image/jpeg")
+    resp = Response(content=r.content, media_type=media_type)
+    resp.headers["Cache-Control"] = f"public, max-age={IMAGE_CACHE_SECONDS}"
+    return resp
 
 
 @app.get("/api/summary")

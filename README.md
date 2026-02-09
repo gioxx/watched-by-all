@@ -20,6 +20,8 @@ Environment variables (see `docker-compose.yml`):
 - `JELLYFIN_APIKEY` (required): Jellyfin API key.
 - `WATCH_THRESHOLD` (optional, default `0.95`): fraction (0-1) of an item that counts as watched if `Played` isn’t set.
 - `REFRESH_MINUTES` (optional, default `30`): minimum minutes between automatic refreshes of cached data.
+- `PROXY_IMAGES` (optional, default `true`): when `true`, posters are proxied through this app to avoid mixed-content or private-host issues (useful behind HTTPS/CDN tunnels).
+- `IMAGE_CACHE_SECONDS` (optional, default `86400`): cache-control duration for proxied images.
 
 ## Run (Docker)
 ```sh
@@ -76,4 +78,5 @@ Open http://localhost:8088.
 - `POST /api/selected-users`: `{ "selected_user_ids": ["..."] }` to persist selection.
 - `POST /api/refresh`: force refresh the cache now.
 - `GET /api/user/{user_id}/history`: full history for a user (movies + episodes).
+- `GET /image/{item_id}?tag=...`: proxies a Jellyfin image (used by the UI when `PROXY_IMAGES=true`).
 - Static assets at `/static/*` serve the UI.
