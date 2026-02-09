@@ -10,6 +10,10 @@
 </head>
 
 <body>
+    <div id="bootLoading" style="position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:linear-gradient(120deg, rgba(9,13,23,.9), rgba(14,19,32,.9)); color:#e8eefc; z-index:9999; font-size:18px; gap:10px;">
+        <span>⏳</span>
+        <span id="bootLoadingText">Loading data…</span>
+    </div>
     <header>
         <div class="brand">
             <img src="/static/watched_icon.webp" alt="" width="44" height="44" aria-hidden="true" />
@@ -32,6 +36,9 @@
     </header>
 
     <main>
+        <div id="backendStatus" style="display:none; margin-bottom:10px; padding:10px 12px; border-radius:12px; border:1px solid #613b2f; background:#2d1a15; color:#f3d9d0; font-weight:600;">
+            ⚠️ Jellyfin unreachable. Check URL/network and retry.
+        </div>
         <div class="tabs">
             <button id="tabMovies" class="active">Movies</button>
             <button id="tabShows">Seasons (complete)</button>
@@ -89,6 +96,9 @@
     <script>
         let translations = {};
         let currentLang = 'en';
+        const bootLoading = document.getElementById('bootLoading');
+        const bootLoadingText = document.getElementById('bootLoadingText');
+        const backendStatus = document.getElementById('backendStatus');
 
         function escapeHtml(s) {
             return String(s || '').replace(/[&<>"']/g, (c) => ({
@@ -99,6 +109,12 @@
         function t(key, vars = {}) {
             const base = translations[key] || translations[key.replace(/:[^.]*/, '')] || key;
             return Object.keys(vars).reduce((acc, k) => acc.replace(new RegExp(`{${k}}`, 'g'), vars[k]), base);
+        }
+
+        function setBackendStatus(message = '', visible = false) {
+            if (!backendStatus) return;
+            backendStatus.textContent = message || '⚠️ Jellyfin unreachable. Check URL/network and retry.';
+            backendStatus.style.display = visible ? 'block' : 'none';
         }
 
         let currentTheme = localStorage.getItem('theme') || 'dark';
@@ -174,6 +190,7 @@
             if (themeToggle) {
                 themeToggle.setAttribute('aria-label', currentTheme === 'light' ? t('theme.dark') : t('theme.light'));
             }
+            if (bootLoadingText) bootLoadingText.textContent = t('loading') || 'Loading data…';
         }
 
         let allUsers = [];
@@ -213,11 +230,20 @@
         }
 
         async function loadUsers() {
-            const r = await fetch('/api/users');
-            const data = await r.json();
-            allUsers = (data.users || []).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-            selectedUserIds = new Set(data.selected_user_ids || []);
-            renderUsers();
+            try {
+                const r = await fetch('/api/users');
+                if (!r.ok) throw new Error('users');
+                const data = await r.json();
+                allUsers = (data.users || []).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+                selectedUserIds = new Set(data.selected_user_ids || []);
+                renderUsers();
+                setBackendStatus('', false);
+            } catch (e) {
+                setBackendStatus(t('loadingError') || '⚠️ Jellyfin unreachable. Retry.', true);
+                allUsers = [];
+                selectedUserIds = new Set();
+                renderUsers();
+            }
 
             // Populate history select
             const prev = historyUser.value;
@@ -305,7 +331,16 @@
             if (mode === 'history') {
                 grid.classList.remove('grid');
                 grid.style.display = 'block';
-                const movies = filtered.filter(i => !i.seriesName);
+                const moviesRaw = filtered.filter(i => !i.seriesName);
+                const movieMap = new Map();
+                moviesRaw.forEach(m => {
+                    const key = m.ratingKey || m.providerKey || m.title || JSON.stringify(m);
+                    const prev = movieMap.get(key);
+                    if (!prev || (m.date || 0) > (prev.date || 0)) {
+                        movieMap.set(key, m);
+                    }
+                });
+                const movies = Array.from(movieMap.values()).sort((a, b) => (b.date || 0) - (a.date || 0));
                 const episodes = filtered.filter(i => i.seriesName);
                 const grouped = {};
                 episodes.forEach(e => {
@@ -359,10 +394,17 @@
         }
 
         async function loadSummary() {
-            const r = await fetch('/api/summary');
-            const s = await r.json();
-            const date = s.lastRefresh ? new Date(s.lastRefresh * 1000).toLocaleString() : '—';
-            summary.textContent = `${t('header.summaryIcon')} ${t('summary.template', { users: s.users, movies: s.moviesByAll, seasons: s.showsByAll, date })}`;
+            try {
+                const r = await fetch('/api/summary');
+                if (!r.ok) throw new Error('summary');
+                const s = await r.json();
+                const date = s.lastRefresh ? new Date(s.lastRefresh * 1000).toLocaleString() : '—';
+                summary.textContent = `${t('header.summaryIcon')} ${t('summary.template', { users: s.users, movies: s.moviesByAll, seasons: s.showsByAll, date })}`;
+                setBackendStatus('', false);
+            } catch (e) {
+                setBackendStatus(t('loadingError') || '⚠️ Jellyfin unreachable. Retry.', true);
+                summary.textContent = `${t('header.summaryIcon')} —`;
+            }
         }
 
         async function loadItems() {
@@ -377,18 +419,35 @@
                     render();
                     return;
                 }
-                const r = await fetch(`/api/user/${encodeURIComponent(historyUser.value)}/history`);
-                const data = await r.json();
-                items = data.items || [];
-                render();
-                return;
+                try {
+                    const r = await fetch(`/api/user/${encodeURIComponent(historyUser.value)}/history`);
+                    if (!r.ok) throw new Error('history');
+                    const data = await r.json();
+                    items = data.items || [];
+                    render();
+                    setBackendStatus('', false);
+                    return;
+                } catch (e) {
+                    setBackendStatus(t('loadingError') || '⚠️ Jellyfin unreachable. Retry.', true);
+                    items = [];
+                    render();
+                    return;
+                }
             }
 
             const url = mode === 'movies' ? '/api/movies' : '/api/shows';
-            const r = await fetch(url);
-            const data = await r.json();
-            items = data.items || [];
-            render();
+            try {
+                const r = await fetch(url);
+                if (!r.ok) throw new Error('items');
+                const data = await r.json();
+                items = data.items || [];
+                render();
+                setBackendStatus('', false);
+            } catch (e) {
+                setBackendStatus(t('loadingError') || '⚠️ Jellyfin unreachable. Retry.', true);
+                items = [];
+                render();
+            }
         }
 
         tabMovies.addEventListener('click', async () => {
@@ -486,9 +545,13 @@
             const storedLang = localStorage.getItem('lang') || 'en';
             await loadLang(storedLang);
             applyTheme(currentTheme);
-            await loadSummary();
-            try { await loadUsers(); } catch (e) { }
-            await loadItems();
+            try {
+                await loadSummary();
+                try { await loadUsers(); } catch (e) { }
+                await loadItems();
+            } finally {
+                if (bootLoading) bootLoading.style.display = 'none';
+            }
         })();
     </script>
 </body>

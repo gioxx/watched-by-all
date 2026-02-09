@@ -99,7 +99,17 @@
             }
             const res = await fetch(`/api/user/${encodeURIComponent(userId)}/history`);
             const data = await res.json();
-            const epis = (data.items || []).filter(e => e.seriesId === seriesId);
+            // Deduplicate episodes by episodeId/providerKey; keep latest date
+            const raw = (data.items || []).filter(e => e.seriesId === seriesId);
+            const byEp = new Map();
+            raw.forEach(e => {
+                const key = e.episodeId || e.ratingKey || e.providerKey || `${e.seriesId}:${e.seasonIndex}:${e.episodeIndex}:${e.title}`;
+                const prev = byEp.get(key);
+                if (!prev || (e.date || 0) > (prev.date || 0)) {
+                    byEp.set(key, e);
+                }
+            });
+            const epis = Array.from(byEp.values());
             if (epis.length === 0) {
                 document.getElementById('seriesInfo').textContent = t('detail.noEpisodes');
                 return;

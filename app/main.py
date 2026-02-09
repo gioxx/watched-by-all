@@ -4,6 +4,7 @@ import asyncio
 import logging
 import os
 import time
+import hashlib
 from datetime import datetime
 from typing import Any, Dict, List
 
@@ -23,16 +24,29 @@ WATCH_THRESHOLD = float(os.environ.get("WATCH_THRESHOLD", "0.95"))
 REFRESH_MINUTES = int(os.environ.get("REFRESH_MINUTES", "30"))
 PROXY_IMAGES = os.environ.get("PROXY_IMAGES", "true").strip().lower() in ("1", "true", "yes", "on")
 IMAGE_CACHE_SECONDS = int(os.environ.get("IMAGE_CACHE_SECONDS", "86400"))
+JELLYFIN_TIMEOUT = float(os.environ.get("JELLYFIN_TIMEOUT", "5.0"))
+THUMB_CACHE_DIR = os.environ.get("THUMB_CACHE_DIR", "thumb_cache").strip() or "thumb_cache"
+THUMB_CACHE_TTL_HOURS = float(os.environ.get("THUMB_CACHE_TTL_HOURS", "72"))
+THUMB_FETCH_TIMEOUT = float(os.environ.get("THUMB_FETCH_TIMEOUT", "5.0"))
+INTERNAL_HTTP_BASE = os.environ.get("INTERNAL_HTTP_BASE", "http://127.0.0.1:8088").strip()
+JELLYFIN_TIMEOUT = float(os.environ.get("JELLYFIN_TIMEOUT", "5.0"))
+THUMB_CACHE_DIR = os.environ.get("THUMB_CACHE_DIR", "thumb_cache").strip() or "thumb_cache"
+THUMB_CACHE_TTL_HOURS = float(os.environ.get("THUMB_CACHE_TTL_HOURS", "72"))
+THUMB_FETCH_TIMEOUT = float(os.environ.get("THUMB_FETCH_TIMEOUT", "5.0"))
+JELLYFIN_TIMEOUT = float(os.environ.get("JELLYFIN_TIMEOUT", "5.0"))
 
 if not (JELLYFIN_URL and JELLYFIN_APIKEY):
     raise RuntimeError("Missing required env vars: JELLYFIN_URL, JELLYFIN_APIKEY")
 
-jellyfin = JellyfinClient(JELLYFIN_URL, JELLYFIN_APIKEY)
+os.makedirs(THUMB_CACHE_DIR, exist_ok=True)
+
+jellyfin = JellyfinClient(JELLYFIN_URL, JELLYFIN_APIKEY, timeout=JELLYFIN_TIMEOUT)
 
 cache = Cache()
 app = FastAPI(title="Jellyfin Watched-By-All Dashboard")
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/thumbs", StaticFiles(directory=THUMB_CACHE_DIR), name="thumbs")
 
 logger = logging.getLogger("jellyfin-watched-by-all")
 
@@ -191,6 +205,7 @@ async def refresh_cache(force: bool = False) -> None:
                 thumb_url = _jellyfin_thumb(item_id, primary_tag)
             elif series_primary_tag and it.get("SeriesId"):
                 thumb_url = _jellyfin_thumb(str(it.get("SeriesId")), series_primary_tag)
+            thumb_url = await _cache_thumb(thumb_url)
 
             ud = it.get("UserData", {}) or {}
             played_pct = 0.0
@@ -262,7 +277,7 @@ async def refresh_cache(force: bool = False) -> None:
                         "title": it.get("SeriesName") or "",
                         "year": "",
                         "type": "show",
-                        "thumb": series_thumb_url or thumb_url,
+                        "thumb": await _cache_thumb(series_thumb_url or thumb_url),
                     }
                 if season_id and season_id not in cache.jellyfin_meta:
                     cache.jellyfin_meta[season_id] = {
@@ -270,7 +285,7 @@ async def refresh_cache(force: bool = False) -> None:
                         "title": f"{it.get('SeriesName') or ''} {it.get('SeasonName') or ''}".strip(),
                         "year": "",
                         "type": "season",
-                        "thumb": thumb_url,
+                        "thumb": await _cache_thumb(thumb_url),
                     }
 
                 # Aggregate runtime per season once per episode
@@ -287,6 +302,9 @@ async def refresh_cache(force: bool = False) -> None:
                         cache.season_runtime_minutes[season_id] = cache.season_runtime_minutes.get(season_id, 0) + runtime_minutes
                 if season_id and date_ts:
                     cache.season_last_view[season_id] = max(cache.season_last_view.get(season_id, 0.0), date_ts)
+
+                thumb_url = await _cache_thumb(thumb_url)
+                series_thumb_url = await _cache_thumb(series_thumb_url)
 
             event = {
                 "source": "jellyfin",
@@ -356,10 +374,66 @@ async def _item_title_thumb(rating_key: str) -> Dict[str, str] | None:
     return None
 
 
+def _thumb_cache_path(url: str) -> str:
+    if not url:
+        return ""
+    fname = hashlib.blake2b(url.encode("utf-8"), digest_size=16).hexdigest()  # deterministic key
+    return os.path.join(THUMB_CACHE_DIR, f"{fname}.jpg")
+
+
+async def _cache_thumb(url: str, force: bool = False) -> str:
+    """Cache a remote thumbnail locally and return the local URL."""
+    if not url:
+        return url
+    request_url = url
+    if url.startswith("/"):
+        request_url = f"{INTERNAL_HTTP_BASE.rstrip('/')}{url}"
+    fname = _thumb_cache_path(url)
+    if not fname:
+        return url
+    ttl_seconds = max(THUMB_CACHE_TTL_HOURS, 0) * 3600
+    now = time.time()
+    try:
+        if os.path.exists(fname) and not force:
+            if ttl_seconds <= 0 or (now - os.path.getmtime(fname)) < ttl_seconds:
+                return f"/thumbs/{os.path.basename(fname)}"
+    except Exception:
+        pass
+
+    try:
+        async with httpx.AsyncClient(timeout=THUMB_FETCH_TIMEOUT) as client:
+            r = await client.get(request_url)
+            r.raise_for_status()
+            with open(fname, "wb") as dst:
+                dst.write(r.content)
+            os.utime(fname, (now, now))
+            return f"/thumbs/{os.path.basename(fname)}"
+    except Exception:
+        return url
+
+
 @app.on_event("startup")
 async def _startup() -> None:
-    # Refresh on boot, then keep a background refresh loop.
-    await refresh_cache(force=True)
+    # Quick reachability probe (non-blocking) to surface Jellyfin URL issues early.
+    async def probe_jellyfin():
+        test_url = f"{JELLYFIN_URL}/System/Info"
+        try:
+            async with httpx.AsyncClient(timeout=JELLYFIN_TIMEOUT) as client:
+                r = await client.get(test_url, headers={"X-Emby-Token": JELLYFIN_APIKEY})
+                r.raise_for_status()
+                logger.info("Jellyfin probe OK: %s", test_url)
+        except Exception as exc:
+            logger.warning("Jellyfin probe failed (%s): %s", test_url, exc)
+
+    # Refresh on boot without blocking startup (useful when Jellyfin is slow/offline).
+    async def boot_refresh():
+        try:
+            await refresh_cache(force=True)
+        except Exception:
+            pass
+
+    asyncio.create_task(probe_jellyfin())
+    asyncio.create_task(boot_refresh())
 
     async def loop():
         while True:
@@ -390,12 +464,14 @@ async def image_proxy(item_id: str, tag: str):
     params = {"tag": tag}
 
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=JELLYFIN_TIMEOUT) as client:
             r = await client.get(url, headers=headers, params=params)
             r.raise_for_status()
     except Exception as exc:
-        logger.warning("Image proxy failed for %s (%s): %s", item_id, tag, exc)
-        return JSONResponse({"error": "image fetch failed"}, status_code=502)
+        status = getattr(exc.response, "status_code", 502) if hasattr(exc, "response") else 502
+        level = logger.info if status == 404 else logger.warning
+        level("Image proxy failed for %s (%s): %s", item_id, tag, exc)
+        return JSONResponse({"error": "image fetch failed"}, status_code=status)
 
     media_type = r.headers.get("content-type", "image/jpeg")
     resp = Response(content=r.content, media_type=media_type)
