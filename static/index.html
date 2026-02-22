@@ -111,7 +111,7 @@
                 <div id="cacheTitle" style="font-weight:700;">Poster cache</div>
                 <button id="btnCloseCache">Close</button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body" style="overflow-x:hidden;">
                 <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
                     <div>
                         <div id="cacheHelper" class="muted">Cache info and manual controls for thumbnails.</div>
@@ -127,9 +127,9 @@
                     <div class="pill" id="cacheSize">—</div>
                 </div>
                 <div style="display:flex; flex-direction:column; gap:6px; margin-top:8px;">
-                    <div class="pill" id="cacheProgress" style="display:flex; width:100%; justify-content:flex-start;">—</div>
-                    <div class="pill" id="cacheEta" style="display:flex; width:100%; justify-content:flex-start;">—</div>
-                    <progress id="cacheProgressBar" max="100" value="0" style="width:100%; height:8px;"></progress>
+                    <div class="pill" id="cacheProgress" style="display:flex; width:100%; justify-content:flex-start; box-sizing:border-box;">—</div>
+                    <div class="pill" id="cacheEta" style="display:flex; width:100%; justify-content:flex-start; box-sizing:border-box;">—</div>
+                    <progress id="cacheProgressBar" max="100" value="0" style="display:block; width:100%; height:8px; box-sizing:border-box;"></progress>
                 </div>
             </div>
         </div>
