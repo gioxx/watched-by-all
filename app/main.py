@@ -44,6 +44,16 @@ except ValueError:
     THUMB_MAX_HEIGHT = 900
 THUMB_MAX_WIDTH = max(0, THUMB_MAX_WIDTH)
 THUMB_MAX_HEIGHT = max(0, THUMB_MAX_HEIGHT)
+try:
+    THUMB_REBUILD_BATCH = int(os.environ.get("THUMB_REBUILD_BATCH", "5"))
+except ValueError:
+    THUMB_REBUILD_BATCH = 5
+try:
+    THUMB_REBUILD_PAUSE_MS = float(os.environ.get("THUMB_REBUILD_PAUSE_MS", "40"))
+except ValueError:
+    THUMB_REBUILD_PAUSE_MS = 40.0
+THUMB_REBUILD_BATCH = max(1, THUMB_REBUILD_BATCH)
+THUMB_REBUILD_PAUSE_MS = max(0.0, THUMB_REBUILD_PAUSE_MS)
 
 if not (JELLYFIN_URL and JELLYFIN_APIKEY):
     raise RuntimeError("Missing required env vars: JELLYFIN_URL, JELLYFIN_APIKEY")
@@ -54,6 +64,15 @@ jellyfin = JellyfinClient(JELLYFIN_URL, JELLYFIN_APIKEY, timeout=JELLYFIN_TIMEOU
 
 cache = Cache()
 thumb_cache_last_refresh = 0.0
+thumb_cache_job_state: Dict[str, Any] = {
+    "running": False,
+    "phase": "idle",
+    "startedAt": 0.0,
+    "finishedAt": 0.0,
+    "lastError": "",
+    "lastAction": "",
+}
+thumb_cache_job_task: asyncio.Task | None = None
 app = FastAPI(title="Jellyfin Watched-By-All Dashboard")
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -161,7 +180,7 @@ async def _show_episode_keys(show_rating_key: str) -> List[str]:
     return await _jellyfin_show_episode_keys(show_rating_key)
 
 
-async def refresh_cache(force: bool = False) -> None:
+async def refresh_cache(force: bool = False, recache_thumbs: bool = False, low_priority: bool = False) -> None:
     global thumb_cache_last_refresh
     """Pull users + history from Jellyfin only and compute intersections."""
     if not force and not cache.is_stale(REFRESH_MINUTES):
@@ -196,6 +215,7 @@ async def refresh_cache(force: bool = False) -> None:
         logger.warning("Jellyfin: failed to fetch users", exc_info=True)
         return
 
+    processed_items = 0
     for juid, _ in cache.users.items():
         try:
             items_resp = await jellyfin.get_user_items(juid)
@@ -223,7 +243,7 @@ async def refresh_cache(force: bool = False) -> None:
                 thumb_url = _jellyfin_thumb(item_id, primary_tag)
             elif series_primary_tag and it.get("SeriesId"):
                 thumb_url = _jellyfin_thumb(str(it.get("SeriesId")), series_primary_tag)
-            thumb_url = await _cache_thumb(thumb_url)
+            thumb_url = await _cache_thumb(thumb_url, force=recache_thumbs)
 
             ud = it.get("UserData", {}) or {}
             played_pct = 0.0
@@ -295,7 +315,7 @@ async def refresh_cache(force: bool = False) -> None:
                         "title": it.get("SeriesName") or "",
                         "year": "",
                         "type": "show",
-                        "thumb": await _cache_thumb(series_thumb_url or thumb_url),
+                        "thumb": await _cache_thumb(series_thumb_url or thumb_url, force=recache_thumbs),
                     }
                 if season_id and season_id not in cache.jellyfin_meta:
                     cache.jellyfin_meta[season_id] = {
@@ -303,7 +323,7 @@ async def refresh_cache(force: bool = False) -> None:
                         "title": f"{it.get('SeriesName') or ''} {it.get('SeasonName') or ''}".strip(),
                         "year": "",
                         "type": "season",
-                        "thumb": await _cache_thumb(thumb_url),
+                        "thumb": await _cache_thumb(thumb_url, force=recache_thumbs),
                     }
 
                 # Aggregate runtime per season once per episode
@@ -321,8 +341,8 @@ async def refresh_cache(force: bool = False) -> None:
                 if season_id and date_ts:
                     cache.season_last_view[season_id] = max(cache.season_last_view.get(season_id, 0.0), date_ts)
 
-                thumb_url = await _cache_thumb(thumb_url)
-                series_thumb_url = await _cache_thumb(series_thumb_url)
+                thumb_url = await _cache_thumb(thumb_url, force=recache_thumbs)
+                series_thumb_url = await _cache_thumb(series_thumb_url, force=recache_thumbs)
 
             event = {
                 "source": "jellyfin",
@@ -347,6 +367,9 @@ async def refresh_cache(force: bool = False) -> None:
                 "thumb": thumb_url,
             }
             _record_history(juid, event)
+            processed_items += 1
+            if low_priority and recache_thumbs and (processed_items % THUMB_REBUILD_BATCH == 0):
+                await asyncio.sleep(THUMB_REBUILD_PAUSE_MS / 1000.0)
 
     user_ids = _effective_user_ids()
 
@@ -450,6 +473,12 @@ def _thumb_cache_status() -> Dict[str, Any]:
         "size": size,
         "lastRefresh": thumb_cache_last_refresh,
         "ttlHours": THUMB_CACHE_TTL_HOURS,
+        "jobRunning": bool(thumb_cache_job_state.get("running")),
+        "jobPhase": str(thumb_cache_job_state.get("phase") or "idle"),
+        "jobStartedAt": float(thumb_cache_job_state.get("startedAt") or 0.0),
+        "jobFinishedAt": float(thumb_cache_job_state.get("finishedAt") or 0.0),
+        "jobLastError": str(thumb_cache_job_state.get("lastError") or ""),
+        "jobLastAction": str(thumb_cache_job_state.get("lastAction") or ""),
     }
 
 
@@ -468,6 +497,33 @@ def _clear_thumb_cache_files() -> int:
     except Exception:
         pass
     return removed
+
+
+async def _run_thumb_cache_job(clear_first: bool = False) -> None:
+    thumb_cache_job_state["running"] = True
+    thumb_cache_job_state["phase"] = "clearing" if clear_first else "refreshing"
+    thumb_cache_job_state["startedAt"] = time.time()
+    thumb_cache_job_state["finishedAt"] = 0.0
+    thumb_cache_job_state["lastError"] = ""
+    thumb_cache_job_state["lastAction"] = "clear_rebuild" if clear_first else "refresh"
+    try:
+        if clear_first:
+            _clear_thumb_cache_files()
+        await refresh_cache(force=True, recache_thumbs=True, low_priority=True)
+    except Exception as exc:
+        thumb_cache_job_state["lastError"] = str(exc)
+    finally:
+        thumb_cache_job_state["running"] = False
+        thumb_cache_job_state["phase"] = "idle"
+        thumb_cache_job_state["finishedAt"] = time.time()
+
+
+def _start_thumb_cache_job(clear_first: bool = False) -> bool:
+    global thumb_cache_job_task
+    if thumb_cache_job_task and not thumb_cache_job_task.done():
+        return False
+    thumb_cache_job_task = asyncio.create_task(_run_thumb_cache_job(clear_first=clear_first))
+    return True
 
 
 @app.on_event("startup")
@@ -607,15 +663,14 @@ async def api_thumb_cache_status():
 
 @app.post("/api/thumb-cache/refresh")
 async def api_thumb_cache_refresh():
-    await refresh_cache(force=True)
-    return JSONResponse({"ok": True, **_thumb_cache_status()})
+    started = _start_thumb_cache_job(clear_first=False)
+    return JSONResponse({"ok": True, "started": started, **_thumb_cache_status()})
 
 
 @app.post("/api/thumb-cache/clear")
 async def api_thumb_cache_clear():
-    removed = _clear_thumb_cache_files()
-    await refresh_cache(force=True)
-    return JSONResponse({"ok": True, "removedFiles": removed, **_thumb_cache_status()})
+    started = _start_thumb_cache_job(clear_first=True)
+    return JSONResponse({"ok": True, "started": started, **_thumb_cache_status()})
 
 
 @app.get("/api/movies")

@@ -235,6 +235,7 @@
         const btnCacheRefresh = document.getElementById('btnCacheRefresh');
         const btnCacheClear = document.getElementById('btnCacheClear');
         let summaryUsersCount = 0;
+        let cacheStatusTimer = null;
 
         function renderUsersPill() {
             const totalUsers = allUsers.length > 0 ? allUsers.length : summaryUsersCount;
@@ -408,6 +409,23 @@
                 document.getElementById('cacheLast').textContent = t('cache.last', { date: last });
                 document.getElementById('cacheFiles').textContent = t('cache.files', { count: data.files || 0 });
                 document.getElementById('cacheSize').textContent = t('cache.size', { mb: sizeMb });
+                const running = !!data.jobRunning;
+                const phase = String(data.jobPhase || '');
+                const refreshLabel = document.getElementById('cacheRefreshLabel');
+                const clearLabel = document.getElementById('cacheClearLabel');
+                if (btnCacheRefresh) btnCacheRefresh.disabled = running;
+                if (btnCacheClear) btnCacheClear.disabled = running;
+                if (refreshLabel) refreshLabel.textContent = phase === 'refreshing' ? t('cache.refreshing') : t('cache.refresh');
+                if (clearLabel) clearLabel.textContent = phase === 'clearing' ? t('cache.clearing') : t('cache.clearRebuild');
+                if (cacheStatusTimer) {
+                    clearTimeout(cacheStatusTimer);
+                    cacheStatusTimer = null;
+                }
+                if (running) {
+                    cacheStatusTimer = setTimeout(() => {
+                        loadCacheStatus();
+                    }, 1500);
+                }
             } catch (e) {
                 document.getElementById('cacheLast').textContent = t('cache.statusError');
                 document.getElementById('cacheFiles').textContent = '—';
@@ -416,32 +434,22 @@
         }
 
         async function refreshCacheThumbs() {
-            if (!btnCacheRefresh) return;
-            btnCacheRefresh.disabled = true;
-            const label = document.getElementById('cacheRefreshLabel');
-            if (label) label.textContent = t('cache.refreshing');
             try {
                 const r = await fetch('/api/thumb-cache/refresh', { method: 'POST' });
                 if (!r.ok) throw new Error('cache_refresh');
                 await loadCacheStatus();
-            } finally {
-                btnCacheRefresh.disabled = false;
-                if (label) label.textContent = t('cache.refresh');
+            } catch (e) {
+                await loadCacheStatus();
             }
         }
 
         async function clearAndRebuildCacheThumbs() {
-            if (!btnCacheClear) return;
-            btnCacheClear.disabled = true;
-            const label = document.getElementById('cacheClearLabel');
-            if (label) label.textContent = t('cache.clearing');
             try {
                 const r = await fetch('/api/thumb-cache/clear', { method: 'POST' });
                 if (!r.ok) throw new Error('cache_clear');
                 await loadCacheStatus();
-            } finally {
-                btnCacheClear.disabled = false;
-                if (label) label.textContent = t('cache.clearRebuild');
+            } catch (e) {
+                await loadCacheStatus();
             }
         }
 
