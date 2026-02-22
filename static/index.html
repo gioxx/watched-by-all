@@ -753,17 +753,23 @@
 
         (async () => {
             const storedLang = localStorage.getItem('lang') || 'en';
-            await loadLang(storedLang);
-            await loadAppMeta();
-            applyTheme(currentTheme);
             try {
-                await loadSummary();
-                try { await loadUsers(); } catch (e) { }
-                await loadItems();
-                await loadCacheStatus();
+                await Promise.all([
+                    loadLang(storedLang),
+                    loadAppMeta(),
+                ]);
+                applyTheme(currentTheme);
+            } catch (e) {
+                // Keep defaults and continue.
             } finally {
                 if (bootLoading) bootLoading.style.display = 'none';
             }
+            Promise.allSettled([
+                loadSummary(),
+                loadUsers(),
+                loadItems(),
+                loadCacheStatus(),
+            ]);
         })();
     </script>
 </body>
