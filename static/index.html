@@ -764,12 +764,15 @@
             } finally {
                 if (bootLoading) bootLoading.style.display = 'none';
             }
-            Promise.allSettled([
+            const hydrate = () => Promise.allSettled([
                 loadSummary(),
                 loadUsers(),
                 loadItems(),
                 loadCacheStatus(),
             ]);
+            hydrate();
+            setTimeout(hydrate, 3000);
+            setTimeout(hydrate, 8000);
         })();
     </script>
 </body>
