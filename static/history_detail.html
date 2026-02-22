@@ -11,6 +11,10 @@
 </head>
 
 <body>
+    <div id="bootLoading" style="position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:linear-gradient(120deg, rgba(9,13,23,.9), rgba(14,19,32,.9)); color:#e8eefc; z-index:9999; font-size:18px; gap:10px;">
+        <span>⏳</span>
+        <span id="bootLoadingText">Loading data…</span>
+    </div>
     <header>
         <div class="header-left">
             <button id="backBtn" class="pill" type="button">← Back</button>
@@ -46,6 +50,8 @@
         let translations = {};
         let currentLang = localStorage.getItem('lang') || 'en';
         let currentTheme = localStorage.getItem('theme') || 'dark';
+        const bootLoading = document.getElementById('bootLoading');
+        const bootLoadingText = document.getElementById('bootLoadingText');
 
         function escapeHtml(str) {
             return String(str || '').replace(/[&<>"']/g, c => ({
@@ -91,6 +97,7 @@
             } catch (e) {
                 translations = {};
             }
+            if (bootLoadingText) bootLoadingText.textContent = t('loading') || 'Loading data…';
             localStorage.setItem('lang', lang);
             applyStaticText();
         }
@@ -207,11 +214,15 @@
         }
 
         (async () => {
-            await loadLang(currentLang);
-            await resolveAnalyzedUserName();
-            applyStaticText();
-            applyTheme(currentTheme);
-            await loadDetail();
+            try {
+                await loadLang(currentLang);
+                await resolveAnalyzedUserName();
+                applyStaticText();
+                applyTheme(currentTheme);
+                await loadDetail();
+            } finally {
+                if (bootLoading) bootLoading.style.display = 'none';
+            }
         })();
 
         document.getElementById('langSelect').addEventListener('change', async (e) => {
