@@ -132,6 +132,14 @@
             return count === 1 ? t('label.user.one') : t('label.user.many');
         }
 
+        function movieNoun(count) {
+            return count === 1 ? t('label.movie.one') : t('label.movie.many');
+        }
+
+        function seasonNoun(count) {
+            return count === 1 ? t('label.season.one') : t('label.season.many');
+        }
+
         function renderFooterMeta() {
             const nameEl = document.getElementById('footerProjectName');
             const descEl = document.getElementById('footerProjectDesc');
@@ -199,6 +207,23 @@
         const historyModalBody = document.getElementById('historyModalBody');
         const btnCloseHistory = document.getElementById('btnCloseHistory');
         const themeToggle = document.getElementById('themeToggle');
+        let summaryUsersCount = 0;
+
+        function renderUsersPill() {
+            const totalUsers = allUsers.length > 0 ? allUsers.length : summaryUsersCount;
+            if (!totalUsers) {
+                btnUsers.textContent = t('header.usersCount', { icon: t('header.usersIcon'), noun: userNoun(2) });
+                return;
+            }
+            const selectedUsers = selectedUserIds.size;
+            const effectiveUsers = selectedUsers > 0 ? selectedUsers : totalUsers;
+            const noun = userNoun(effectiveUsers);
+            if (selectedUsers > 0 && selectedUsers < totalUsers) {
+                btnUsers.textContent = `${t('header.usersIcon')} ${effectiveUsers}/${totalUsers} ${noun}`;
+                return;
+            }
+            btnUsers.textContent = `${t('header.usersIcon')} ${effectiveUsers} ${noun}`;
+        }
 
         async function loadLang(lang) {
             currentLang = lang;
@@ -221,7 +246,7 @@
             tabHistory.textContent = t('tab.history');
             search.placeholder = t('search.placeholder');
             refreshBtn.textContent = t('button.refresh');
-            btnUsers.textContent = t('header.usersCount', { icon: t('header.usersIcon'), noun: userNoun(2) });
+            renderUsersPill();
             document.getElementById('historyControls').querySelector('.muted').textContent = t('history.helper');
 
             // Users modal
@@ -291,12 +316,14 @@
                 allUsers = (data.users || []).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
                 selectedUserIds = new Set(data.selected_user_ids || []);
                 renderUsers();
+                renderUsersPill();
                 setBackendStatus('', false);
             } catch (e) {
                 setBackendStatus(t('loadingError') || '⚠️ Jellyfin unreachable. Retry.', true);
                 allUsers = [];
                 selectedUserIds = new Set();
                 renderUsers();
+                renderUsersPill();
             }
 
             // Populate history select
@@ -314,6 +341,7 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ selected_user_ids: Array.from(selectedUserIds) })
             });
+            renderUsersPill();
             await loadSummary();
             await loadItems();
         }
@@ -454,12 +482,24 @@
                 const s = await r.json();
                 const date = s.lastRefresh ? new Date(s.lastRefresh * 1000).toLocaleString() : '—';
                 const users = Number(s.users ?? 0);
-                summary.textContent = `${t('header.summaryIcon')} ${t('summary.template', { users, usersNoun: userNoun(users), movies: s.moviesByAll, seasons: s.showsByAll, date })}`;
-                btnUsers.textContent = t('header.usersCount', { icon: t('header.usersIcon'), noun: userNoun(users) });
+                const movies = Number(s.moviesByAll ?? 0);
+                const seasons = Number(s.showsByAll ?? 0);
+                summaryUsersCount = users;
+                summary.textContent = `${t('header.summaryIcon')} ${t('summary.template', {
+                    users,
+                    usersNoun: userNoun(users),
+                    movies,
+                    moviesNoun: movieNoun(movies),
+                    seasons,
+                    seasonsNoun: seasonNoun(seasons),
+                    date
+                })}`;
+                renderUsersPill();
                 setBackendStatus('', false);
             } catch (e) {
                 setBackendStatus(t('loadingError') || '⚠️ Jellyfin unreachable. Retry.', true);
                 summary.textContent = `${t('header.summaryIcon')} —`;
+                renderUsersPill();
             }
         }
 
