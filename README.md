@@ -97,6 +97,9 @@ npm run watch:css
 - `GET /api/users`: detected Jellyfin users + currently selected IDs.
 - `POST /api/selected-users`: `{ "selected_user_ids": ["..."] }` to persist selection.
 - `POST /api/refresh`: force refresh the cache now.
+- `GET /api/thumb-cache/status`: thumbnail cache stats (files/size/last refresh).
+- `POST /api/thumb-cache/refresh`: refresh cache metadata/thumbnails.
+- `POST /api/thumb-cache/clear`: clear thumbnail cache and rebuild it from scratch.
 - `GET /api/user/{user_id}/history`: full history for a user (movies + episodes).
 - `GET /image/{item_id}?tag=...`: proxies a Jellyfin image (used by the UI when `PROXY_IMAGES=true`).
 - Static assets at `/static/*` serve the UI.

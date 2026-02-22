@@ -53,6 +53,7 @@ os.makedirs(THUMB_CACHE_DIR, exist_ok=True)
 jellyfin = JellyfinClient(JELLYFIN_URL, JELLYFIN_APIKEY, timeout=JELLYFIN_TIMEOUT)
 
 cache = Cache()
+thumb_cache_last_refresh = 0.0
 app = FastAPI(title="Jellyfin Watched-By-All Dashboard")
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -161,6 +162,7 @@ async def _show_episode_keys(show_rating_key: str) -> List[str]:
 
 
 async def refresh_cache(force: bool = False) -> None:
+    global thumb_cache_last_refresh
     """Pull users + history from Jellyfin only and compute intersections."""
     if not force and not cache.is_stale(REFRESH_MINUTES):
         return
@@ -381,6 +383,7 @@ async def refresh_cache(force: bool = False) -> None:
     cache.shows_by_all = sorted(seasons_by_all, key=lambda x: int(x) if x.isdigit() else x)
 
     cache.last_refresh_ts = time.time()
+    thumb_cache_last_refresh = cache.last_refresh_ts
 
 
 async def _item_title_thumb(rating_key: str) -> Dict[str, str] | None:
@@ -426,6 +429,45 @@ async def _cache_thumb(url: str, force: bool = False) -> str:
             return f"/thumbs/{os.path.basename(fname)}"
     except Exception:
         return url
+
+
+def _thumb_cache_status() -> Dict[str, Any]:
+    files = 0
+    size = 0
+    if os.path.isdir(THUMB_CACHE_DIR):
+        try:
+            for entry in os.scandir(THUMB_CACHE_DIR):
+                if entry.is_file():
+                    files += 1
+                    try:
+                        size += entry.stat().st_size
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+    return {
+        "files": files,
+        "size": size,
+        "lastRefresh": thumb_cache_last_refresh,
+        "ttlHours": THUMB_CACHE_TTL_HOURS,
+    }
+
+
+def _clear_thumb_cache_files() -> int:
+    removed = 0
+    if not os.path.isdir(THUMB_CACHE_DIR):
+        return 0
+    try:
+        for entry in os.scandir(THUMB_CACHE_DIR):
+            if entry.is_file():
+                try:
+                    os.remove(entry.path)
+                    removed += 1
+                except Exception:
+                    pass
+    except Exception:
+        pass
+    return removed
 
 
 @app.on_event("startup")
@@ -556,6 +598,24 @@ async def api_force_refresh():
     """Force a cache refresh (useful after library changes)."""
     await refresh_cache(force=True)
     return JSONResponse({"ok": True, "lastRefresh": cache.last_refresh_ts})
+
+
+@app.get("/api/thumb-cache/status")
+async def api_thumb_cache_status():
+    return JSONResponse({"ok": True, **_thumb_cache_status()})
+
+
+@app.post("/api/thumb-cache/refresh")
+async def api_thumb_cache_refresh():
+    await refresh_cache(force=True)
+    return JSONResponse({"ok": True, **_thumb_cache_status()})
+
+
+@app.post("/api/thumb-cache/clear")
+async def api_thumb_cache_clear():
+    removed = _clear_thumb_cache_files()
+    await refresh_cache(force=True)
+    return JSONResponse({"ok": True, "removedFiles": removed, **_thumb_cache_status()})
 
 
 @app.get("/api/movies")
