@@ -26,8 +26,7 @@ Environment variables (see `docker-compose.yml`):
 - `THUMB_CACHE_DIR` (optional, default `thumb_cache`): local folder for cached posters, served at `/thumbs/*`.
 - `THUMB_CACHE_TTL_HOURS` (optional, default `72`): recache posters after N hours; `0` disables expiry.
 - `THUMB_FETCH_TIMEOUT` (optional, default `5`): timeout for downloading posters into the cache.
-- `THUMB_MAX_WIDTH` (optional, default `600`): maximum poster width requested to Jellyfin (px).
-- `THUMB_MAX_HEIGHT` (optional, default `900`): maximum poster height requested to Jellyfin (px).
+- `THUMB_MAX_HEIGHT` (optional, default `500`): maximum poster height requested to Jellyfin (px); width auto-scales to preserve aspect ratio.
 - `INTERNAL_HTTP_BASE` (optional, default `http://127.0.0.1:8088`): base URL used internally to fetch `/image/...` when caching thumbs.
 
 ## Run (Docker)

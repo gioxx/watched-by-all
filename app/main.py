@@ -35,14 +35,9 @@ THUMB_CACHE_TTL_HOURS = float(os.environ.get("THUMB_CACHE_TTL_HOURS", "72"))
 THUMB_FETCH_TIMEOUT = float(os.environ.get("THUMB_FETCH_TIMEOUT", "5.0"))
 JELLYFIN_TIMEOUT = float(os.environ.get("JELLYFIN_TIMEOUT", "5.0"))
 try:
-    THUMB_MAX_WIDTH = int(os.environ.get("THUMB_MAX_WIDTH", "600"))
+    THUMB_MAX_HEIGHT = int(os.environ.get("THUMB_MAX_HEIGHT", "500"))
 except ValueError:
-    THUMB_MAX_WIDTH = 600
-try:
-    THUMB_MAX_HEIGHT = int(os.environ.get("THUMB_MAX_HEIGHT", "900"))
-except ValueError:
-    THUMB_MAX_HEIGHT = 900
-THUMB_MAX_WIDTH = max(0, THUMB_MAX_WIDTH)
+    THUMB_MAX_HEIGHT = 500
 THUMB_MAX_HEIGHT = max(0, THUMB_MAX_HEIGHT)
 try:
     THUMB_MAX_DOWNLOAD_BYTES = int(os.environ.get("THUMB_MAX_DOWNLOAD_BYTES", str(8 * 1024 * 1024)))
@@ -135,8 +130,6 @@ def _jellyfin_thumb(item_id: str, tag: str) -> str:
     if not (item_id and tag):
         return ""
     size_params: List[str] = []
-    if THUMB_MAX_WIDTH > 0:
-        size_params.append(f"maxWidth={THUMB_MAX_WIDTH}")
     if THUMB_MAX_HEIGHT > 0:
         size_params.append(f"maxHeight={THUMB_MAX_HEIGHT}")
     size_qs = "&".join(size_params)
@@ -577,7 +570,7 @@ async def index():
 
 
 @app.get("/image/{item_id}")
-async def image_proxy(item_id: str, tag: str, maxWidth: int | None = None, maxHeight: int | None = None):
+async def image_proxy(item_id: str, tag: str, maxHeight: int | None = None):
     """Proxy Jellyfin images to avoid mixed-content or private-host issues."""
     if not tag:
         return JSONResponse({"error": "tag is required"}, status_code=400)
@@ -585,11 +578,6 @@ async def image_proxy(item_id: str, tag: str, maxWidth: int | None = None, maxHe
     url = f"{JELLYFIN_URL}/Items/{item_id}/Images/Primary"
     headers = {"X-Emby-Token": JELLYFIN_APIKEY}
     params: Dict[str, Any] = {"tag": tag}
-    if THUMB_MAX_WIDTH > 0:
-        effective_width = maxWidth if (maxWidth is not None and maxWidth > 0) else THUMB_MAX_WIDTH
-        params["maxWidth"] = min(effective_width, THUMB_MAX_WIDTH)
-    elif maxWidth is not None and maxWidth > 0:
-        params["maxWidth"] = maxWidth
     if THUMB_MAX_HEIGHT > 0:
         effective_height = maxHeight if (maxHeight is not None and maxHeight > 0) else THUMB_MAX_HEIGHT
         params["maxHeight"] = min(effective_height, THUMB_MAX_HEIGHT)
