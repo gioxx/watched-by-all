@@ -483,6 +483,16 @@ def _thumb_cache_status() -> Dict[str, Any]:
                         pass
         except Exception:
             pass
+    processed = int(thumb_cache_job_state.get("processed") or 0)
+    total = int(thumb_cache_job_state.get("total") or 0)
+    started_at = float(thumb_cache_job_state.get("startedAt") or 0.0)
+    eta_seconds = 0
+    if bool(thumb_cache_job_state.get("running")) and processed > 0 and total > processed and started_at > 0:
+        elapsed = max(0.001, time.time() - started_at)
+        rate = processed / elapsed
+        if rate > 0:
+            eta_seconds = max(0, int((total - processed) / rate))
+
     return {
         "files": files,
         "size": size,
@@ -490,13 +500,14 @@ def _thumb_cache_status() -> Dict[str, Any]:
         "ttlHours": THUMB_CACHE_TTL_HOURS,
         "jobRunning": bool(thumb_cache_job_state.get("running")),
         "jobPhase": str(thumb_cache_job_state.get("phase") or "idle"),
-        "jobStartedAt": float(thumb_cache_job_state.get("startedAt") or 0.0),
+        "jobStartedAt": started_at,
         "jobFinishedAt": float(thumb_cache_job_state.get("finishedAt") or 0.0),
         "jobLastError": str(thumb_cache_job_state.get("lastError") or ""),
         "jobLastAction": str(thumb_cache_job_state.get("lastAction") or ""),
-        "jobProcessed": int(thumb_cache_job_state.get("processed") or 0),
-        "jobTotal": int(thumb_cache_job_state.get("total") or 0),
+        "jobProcessed": processed,
+        "jobTotal": total,
         "jobPercent": float(thumb_cache_job_state.get("percent") or 0.0),
+        "jobEtaSeconds": eta_seconds,
     }
 
 

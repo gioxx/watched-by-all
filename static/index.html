@@ -120,6 +120,7 @@
                 </div>
                 <div style="display:flex; flex-direction:column; gap:6px; margin-top:8px;">
                     <div class="pill" id="cacheProgress">—</div>
+                    <div class="pill" id="cacheEta">—</div>
                     <progress id="cacheProgressBar" max="100" value="0" style="width:100%; height:8px;"></progress>
                 </div>
                 <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:6px;">
@@ -418,10 +419,12 @@
                 const refreshLabel = document.getElementById('cacheRefreshLabel');
                 const clearLabel = document.getElementById('cacheClearLabel');
                 const progressEl = document.getElementById('cacheProgress');
+                const etaEl = document.getElementById('cacheEta');
                 const progressBar = document.getElementById('cacheProgressBar');
                 const processed = Number(data.jobProcessed || 0);
                 const total = Number(data.jobTotal || 0);
                 const percent = Math.max(0, Math.min(100, Number(data.jobPercent || 0)));
+                const etaSeconds = Math.max(0, Number(data.jobEtaSeconds || 0));
                 if (btnCacheRefresh) btnCacheRefresh.disabled = running;
                 if (btnCacheClear) btnCacheClear.disabled = running;
                 if (refreshLabel) refreshLabel.textContent = phase === 'refreshing' ? t('cache.refreshing') : t('cache.refresh');
@@ -450,6 +453,15 @@
                         progressBar.value = running ? percent : (processed > 0 ? 100 : 0);
                     }
                 }
+                if (etaEl) {
+                    if (running && etaSeconds > 0) {
+                        etaEl.textContent = t('cache.eta', { value: formatDuration(etaSeconds) });
+                    } else if (running) {
+                        etaEl.textContent = t('cache.etaPreparing');
+                    } else {
+                        etaEl.textContent = t('cache.etaDone');
+                    }
+                }
                 if (cacheStatusTimer) {
                     clearTimeout(cacheStatusTimer);
                     cacheStatusTimer = null;
@@ -464,10 +476,20 @@
                 document.getElementById('cacheFiles').textContent = '—';
                 document.getElementById('cacheSize').textContent = '—';
                 const progressEl = document.getElementById('cacheProgress');
+                const etaEl = document.getElementById('cacheEta');
                 const progressBar = document.getElementById('cacheProgressBar');
                 if (progressEl) progressEl.textContent = t('cache.statusError');
+                if (etaEl) etaEl.textContent = t('cache.statusError');
                 if (progressBar) progressBar.value = 0;
             }
+        }
+
+        function formatDuration(totalSeconds) {
+            const s = Math.max(0, Math.floor(Number(totalSeconds) || 0));
+            const m = Math.floor(s / 60);
+            const rem = s % 60;
+            if (m <= 0) return `${rem}s`;
+            return `${m}m ${rem}s`;
         }
 
         async function refreshCacheThumbs() {
