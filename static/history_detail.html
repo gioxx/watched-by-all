@@ -41,6 +41,7 @@
         const seriesId = params.get('seriesId') || '';
         const seriesName = params.get('seriesName') ? decodeURIComponent(params.get('seriesName')) : '';
         const userName = params.get('userName') ? decodeURIComponent(params.get('userName')) : '';
+        let analyzedUserName = userName;
 
         let translations = {};
         let currentLang = localStorage.getItem('lang') || 'en';
@@ -59,6 +60,27 @@
         function t(key, vars = {}) {
             const base = translations[key] || key;
             return Object.keys(vars).reduce((acc, k) => acc.replace(new RegExp(`{${k}}`, 'g'), vars[k]), base);
+        }
+
+        function episodeNoun(count) {
+            return count === 1 ? t('label.episode.one') : t('label.episode.many');
+        }
+
+        async function resolveAnalyzedUserName() {
+            if (!userId) return;
+            if (analyzedUserName && analyzedUserName !== userId) return;
+            try {
+                const r = await fetch('/api/users', { cache: 'no-cache' });
+                if (!r.ok) return;
+                const data = await r.json();
+                const users = Array.isArray(data.users) ? data.users : [];
+                const match = users.find(u => String(u.user_id || '') === String(userId));
+                if (match?.name) {
+                    analyzedUserName = match.name;
+                }
+            } catch (e) {
+                // Keep fallback to user id if user lookup fails.
+            }
         }
 
         async function loadLang(lang) {
@@ -83,7 +105,7 @@
                 opt.textContent = `${t('header.langIcon')} ${code}`;
             });
             document.getElementById('themeToggle').setAttribute('aria-label', currentTheme === 'light' ? t('theme.dark') : t('theme.light'));
-            const analyzedUser = userName || userId || '—';
+            const analyzedUser = analyzedUserName || userId || '—';
             document.getElementById('detailUserPill').textContent = t('detail.analyzingUser', { user: analyzedUser });
         }
 
@@ -170,18 +192,24 @@
                         <div class="epi-title section-title" style="padding-top:0;">${escapeHtml(name)}</div>
                         <div class="season-meta-row">
                             <div class="epi-sub">${t('detail.lastViewed')}: ${escapeHtml(lastDateStr)}</div>
-                            <div class="epi-sub">${t('detail.episodesCount', {count: eps.length})}</div>
+                            <div class="epi-sub">${t('detail.episodesCount', { count: eps.length, episodesNoun: episodeNoun(eps.length) })}</div>
                         </div>
                     </div>
                     <div class="episode-list">${epiHtml}</div>
                 </div>`;
             }).join('');
 
-            document.getElementById('seriesInfo').textContent = t('detail.seriesInfo', { series: seriesName || '', count: epis.length });
+            document.getElementById('seriesInfo').textContent = t('detail.seriesInfo', {
+                series: seriesName || '',
+                count: epis.length,
+                episodesNoun: episodeNoun(epis.length)
+            });
         }
 
         (async () => {
             await loadLang(currentLang);
+            await resolveAnalyzedUserName();
+            applyStaticText();
             applyTheme(currentTheme);
             await loadDetail();
         })();
