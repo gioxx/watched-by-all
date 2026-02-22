@@ -34,24 +34,26 @@
         <div id="backendStatus" style="display:none; margin-bottom:10px; padding:10px 12px; border-radius:12px; border:1px solid #613b2f; background:#2d1a15; color:#f3d9d0; font-weight:600;">
             ⚠️ Jellyfin unreachable. Check URL/network and retry.
         </div>
-        <div class="tabs">
-            <button id="tabMovies" class="active">Movies</button>
-            <button id="tabShows">Seasons (complete)</button>
-            <button id="tabHistory">User history</button>
-        </div>
+        <section class="panel content-panel">
+            <div class="tabs">
+                <button id="tabMovies" class="active">Movies</button>
+                <button id="tabShows">Seasons (complete)</button>
+                <button id="tabHistory">User history</button>
+            </div>
 
-        <div class="row">
-            <input id="search" placeholder="Search title…" />
-            <span id="count" class="pill">—</span>
-            <button id="refresh">Refresh</button>
-        </div>
+            <div class="row">
+                <input id="search" placeholder="Search title…" />
+                <span id="count" class="pill">—</span>
+                <button id="refresh">Refresh</button>
+            </div>
 
-        <div id="historyControls" class="row" style="display:none;">
-            <select id="historyUser" class="pill" style="min-width:240px; padding:10px 12px;"></select>
-            <span class="muted">Select the user to see everything they watched.</span>
-        </div>
+            <div id="historyControls" class="row" style="display:none;">
+                <select id="historyUser" class="pill" style="min-width:240px; padding:10px 12px;"></select>
+                <span class="muted">Select the user to see everything they watched.</span>
+            </div>
 
-        <div id="grid" class="grid"></div>
+            <div id="grid" class="grid"></div>
+        </section>
 
         <section class="panel footer-panel">
             <div class="footer-grid">

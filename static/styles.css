@@ -4,9 +4,10 @@
     --bg-soft: #0a1222;
     --text: #e9eef5;
     --muted: #94a3b8;
-    --border: #1d2330;
+    --border: #1f3553;
     --surface: #0c1728;
-    --surface-strong: #121f34;
+    --surface-strong: rgba(12, 23, 40, 0.82);
+    --surface-2: #0f1d33;
     --episode: #0b0f1c;
     --poster: #0b0c10;
     --accent: #22d3ee;
@@ -20,9 +21,10 @@ body[data-theme="light"] {
     --bg-soft: #dbe8ff;
     --text: #0f1a2e;
     --muted: #55657e;
-    --border: #d8e0ed;
+    --border: #bfd2ee;
     --surface: #ffffff;
-    --surface-strong: #eef3fc;
+    --surface-strong: rgba(244, 248, 255, 0.96);
+    --surface-2: #f2f7ff;
     --episode: #eef2fb;
     --poster: #dfe6f2;
     --shadow: rgba(15, 26, 46, 0.08);
@@ -114,7 +116,11 @@ main {
     border: 1px solid var(--border);
     padding: 14px;
     box-shadow: 0 18px 40px -28px rgba(2, 132, 199, 0.65);
-    background: linear-gradient(160deg, color-mix(in srgb, var(--surface) 86%, transparent), color-mix(in srgb, #0f1d33 82%, transparent));
+    background: linear-gradient(160deg, color-mix(in srgb, var(--surface) 86%, transparent), color-mix(in srgb, var(--surface-2) 82%, transparent));
+}
+
+.content-panel {
+    margin-top: 8px;
 }
 
 .tabs {
@@ -171,7 +177,7 @@ input {
 .card {
     border: 1px solid var(--border);
     border-radius: 16px;
-    background: var(--surface);
+    background: linear-gradient(145deg, color-mix(in srgb, var(--surface) 94%, transparent), color-mix(in srgb, var(--surface-2) 90%, transparent));
     overflow: hidden;
     display: flex;
     gap: 12px;
@@ -240,7 +246,7 @@ input {
 }
 
 .footer-panel {
-    margin-top: 14px;
+    margin-top: 2px;
     padding-top: 14px;
     padding-bottom: 14px;
 }
