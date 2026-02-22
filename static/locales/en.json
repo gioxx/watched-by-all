@@ -27,7 +27,7 @@
   "label.playcount": "Playcount: {count}",
   "label.tvSeries": "TV Series",
   "button.episodesDetail": "Episode details",
-  "summary.template": "{users} {usersNoun} · 🎬 {movies} {moviesNoun} · 📺 {seasons} {seasonsNoun} · updated: {date}",
+  "summary.template": "{users} {usersNoun} · 🎬 {movies} {moviesNoun} · 📺 {seasons} {seasonsNoun} · ℹ️ updated: {date}",
   "label.movie.one": "movie",
   "label.movie.many": "movies",
   "label.season.one": "season",
