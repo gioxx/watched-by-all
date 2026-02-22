@@ -2,6 +2,7 @@
   "title": "Watched",
   "header.users": "Utenti",
   "header.usersCount": "{icon} {noun}",
+  "header.jellyfinLabel": "Jellyfin",
   "header.summaryIcon": "ℹ️",
   "header.usersIcon": "👤",
   "header.langIcon": "🌐",
