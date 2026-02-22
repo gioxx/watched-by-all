@@ -53,7 +53,7 @@
   "cache.title": "Cache locandine",
   "cache.helper": "Info cache e controlli manuali per le copertine.",
   "cache.refresh": "Aggiorna",
-  "cache.clearRebuild": "Svuota + ricostruisci",
+  "cache.clearRebuild": "Svuota e ricostruisci",
   "cache.refreshing": "Aggiornamento…",
   "cache.clearing": "Pulizia…",
   "cache.refreshed": "Cache aggiornata.",
