@@ -3,7 +3,7 @@
   "header.users": "Users",
   "header.usersCount": "{icon} {noun}",
   "header.summaryIcon": "ℹ️",
-  "header.usersIcon": "👥",
+  "header.usersIcon": "👤",
   "header.langIcon": "🌐",
   "tab.movies": "Movies",
   "tab.shows": "Seasons (complete)",
