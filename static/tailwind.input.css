@@ -1,0 +1,254 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+    --bg: #030712;
+    --bg-soft: #0a1222;
+    --panel: #0c1728;
+    --panel-2: #0f1d33;
+    --border: #1f3553;
+    --text: #e6efff;
+    --muted: #9cb0cb;
+    --accent: #22d3ee;
+    --pill-bg: rgba(12, 23, 40, 0.82);
+    --pill-text: #dbe9ff;
+    --poster-bg: #07101f;
+  }
+
+  [data-theme="light"] {
+    color-scheme: light;
+    --bg: #eef4ff;
+    --bg-soft: #dbe8ff;
+    --panel: #ffffff;
+    --panel-2: #f2f7ff;
+    --border: #bfd2ee;
+    --text: #0f1c33;
+    --muted: #516380;
+    --accent: #0284c7;
+    --pill-bg: rgba(244, 248, 255, 0.96);
+    --pill-text: #0f1c33;
+    --poster-bg: #dfeafb;
+  }
+
+  html,
+  body {
+    @apply min-h-full;
+  }
+
+  body {
+    @apply m-0 font-sans text-[var(--text)] antialiased;
+    background-image:
+      radial-gradient(900px 500px at 12% -15%, color-mix(in srgb, var(--accent) 24%, transparent), transparent 55%),
+      radial-gradient(700px 420px at 88% 0%, color-mix(in srgb, #14b8a6 18%, transparent), transparent 62%),
+      linear-gradient(180deg, var(--bg-soft), var(--bg));
+    background-repeat: no-repeat, no-repeat, no-repeat;
+    background-attachment: fixed, fixed, fixed;
+  }
+
+  button {
+    @apply text-sm font-medium transition-all duration-150;
+  }
+
+  input,
+  select {
+    @apply rounded-xl border px-3 py-2 text-sm outline-none transition;
+    border-color: var(--border);
+    color: var(--text);
+    background: color-mix(in srgb, var(--panel) 92%, transparent);
+  }
+
+  input:focus,
+  select:focus {
+    border-color: color-mix(in srgb, var(--accent) 68%, var(--border));
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+  }
+}
+
+@layer components {
+  header {
+    @apply sticky top-0 z-30 flex items-center justify-between gap-3 border-b px-4 py-4 backdrop-blur-xl;
+    border-color: var(--border);
+    background: color-mix(in srgb, var(--bg) 70%, transparent);
+  }
+
+  main {
+    @apply mx-auto w-full max-w-7xl px-4 py-6;
+  }
+
+  .brand {
+    @apply font-bold tracking-wide;
+  }
+
+  .pill {
+    @apply inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-150;
+    border-color: var(--border);
+    background: var(--pill-bg);
+    color: var(--pill-text);
+  }
+
+  .pill:hover {
+    @apply -translate-y-px;
+    border-color: color-mix(in srgb, var(--accent) 48%, var(--border));
+  }
+
+  .pill img {
+    filter: invert(1);
+  }
+
+  [data-theme="light"] .pill img {
+    filter: invert(0);
+  }
+
+  .panel {
+    @apply mb-5 rounded-2xl border p-4 shadow-[0_18px_40px_-28px_rgba(2,132,199,.65)];
+    border-color: var(--border);
+    background: linear-gradient(160deg, color-mix(in srgb, var(--panel) 86%, transparent), color-mix(in srgb, var(--panel-2) 82%, transparent));
+    animation: panel-enter 0.24s ease-out both;
+  }
+
+  .row {
+    @apply mb-3 flex w-full flex-wrap items-center gap-2.5;
+  }
+
+  .alpha-row {
+    @apply mb-3 grid w-full gap-1.5;
+    grid-template-columns: repeat(27, minmax(26px, 1fr));
+  }
+
+  .alpha-row button {
+    @apply w-full justify-center px-0;
+  }
+
+  button.active,
+  .pill.active {
+    border-color: color-mix(in srgb, var(--accent) 78%, var(--border));
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+  }
+
+  .grid {
+    @apply grid gap-2.5;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  }
+
+  .card {
+    @apply flex gap-3 overflow-hidden rounded-2xl border p-3 transition-all duration-150 hover:-translate-y-px hover:shadow-glow;
+    border-color: var(--border);
+    background: linear-gradient(145deg, color-mix(in srgb, var(--panel) 94%, transparent), color-mix(in srgb, var(--panel-2) 90%, transparent));
+  }
+
+  .poster {
+    @apply flex h-[110px] w-[74px] shrink-0 items-center justify-center overflow-hidden rounded-xl;
+    background: var(--poster-bg);
+  }
+
+  .poster img {
+    @apply block h-full w-full object-cover;
+  }
+
+  .meta {
+    @apply flex flex-col gap-1.5 py-0.5;
+  }
+
+  .title {
+    @apply text-[15px] font-bold leading-tight text-[var(--text)];
+  }
+
+  .sub {
+    @apply min-h-[18px] text-[13px] text-[var(--muted)];
+  }
+
+  .muted {
+    @apply text-[13px] text-[var(--muted)];
+  }
+
+  .modal-backdrop {
+    @apply fixed inset-0 z-40 hidden items-center justify-center bg-black/60 p-5 backdrop-blur-sm;
+  }
+
+  .modal-panel {
+    @apply flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border;
+    border-color: var(--border);
+    background: linear-gradient(160deg, color-mix(in srgb, var(--panel) 97%, transparent), color-mix(in srgb, var(--panel-2) 96%, transparent));
+  }
+
+  .modal-header {
+    @apply flex items-center justify-between gap-3 border-b px-4 py-3;
+    border-color: var(--border);
+  }
+
+  .modal-body {
+    @apply flex min-h-[200px] flex-1 flex-col gap-2.5 overflow-y-auto p-4;
+    max-height: calc(90vh - 100px);
+  }
+
+  .footer-title {
+    @apply text-[15px] font-bold;
+  }
+
+  .footer-meta {
+    @apply text-[13px] text-[var(--muted)];
+  }
+
+  .footer-panel {
+    padding-top: 0.9rem;
+    padding-bottom: 0.9rem;
+  }
+
+  .footer-grid {
+    @apply items-center gap-3;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .footer-text {
+    min-width: 0;
+  }
+
+  .footer-actions {
+    @apply flex items-center gap-2;
+    justify-content: flex-end;
+    justify-self: end;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+  }
+
+  .footer-actions > .pill {
+    box-sizing: border-box;
+    height: 32px;
+    padding-top: 0;
+    padding-bottom: 0;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .footer-actions > a.pill {
+    min-width: 32px;
+    justify-content: center;
+  }
+}
+
+@keyframes panel-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 900px) {
+  .alpha-row {
+    grid-template-columns: repeat(9, minmax(26px, 1fr));
+  }
+
+  .footer-grid {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+}

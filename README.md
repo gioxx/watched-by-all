@@ -61,6 +61,19 @@ JELLYFIN_URL=http://... JELLYFIN_APIKEY=... uvicorn app.main:app --reload --port
 ```
 Open http://localhost:8088.
 
+## Frontend CSS (Tailwind local build)
+The UI now follows the same Tailwind local workflow used in the sibling project.
+
+```sh
+npm install
+npm run build:css
+```
+
+During development you can keep the compiler running:
+```sh
+npm run watch:css
+```
+
 ## Using the web app
 - **Tabs**: Movies, Seasons (complete), User history.
 - **Users**: click “Users” to choose which Jellyfin users are considered for the “watched by all” logic (empty selection = everyone).
@@ -73,7 +86,7 @@ Open http://localhost:8088.
 ## Localization / customization
 - Locale strings live in `static/locales/en.json` and `static/locales/it.json`. Add another by copying one, translating, and referencing it in `static/index.html` and `static/history_detail.html`.
 - Favicon/logo: `static/watched_icon.webp`.
-- Styles: `static/styles.css`.
+- Styles: `static/styles.css` (project-specific overrides), `static/tailwind.input.css` (source), `static/tailwind.css` (compiled).
 
 ## API surface (served by FastAPI)
 - `GET /api/summary`: counts for users/movies/seasons + last refresh timestamp.
