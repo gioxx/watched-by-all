@@ -3,6 +3,8 @@
   "header.users": "Users",
   "header.usersCount": "{icon} {noun}",
   "header.jellyfinLabel": "Jellyfin",
+  "header.jellyfinUsersCount": "{icon} Jellyfin {noun} · {value}",
+  "header.jellyfinUsersUnknown": "{icon} Jellyfin {noun}",
   "header.summaryIcon": "ℹ️",
   "header.usersIcon": "👤",
   "header.langIcon": "🌐",

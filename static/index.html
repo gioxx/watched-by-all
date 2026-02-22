@@ -211,19 +211,25 @@
 
         function renderUsersPill() {
             const totalUsers = allUsers.length > 0 ? allUsers.length : summaryUsersCount;
-            const jellyfinLabel = t('header.jellyfinLabel') || 'Jellyfin';
+            const icon = t('header.usersIcon');
             if (!totalUsers) {
-                btnUsers.textContent = `${t('header.usersIcon')} ${userNoun(2)} ${jellyfinLabel}`;
+                btnUsers.textContent = t('header.jellyfinUsersUnknown', {
+                    icon,
+                    noun: userNoun(2)
+                });
                 return;
             }
             const selectedUsers = selectedUserIds.size;
             const effectiveUsers = selectedUsers > 0 ? selectedUsers : totalUsers;
             const noun = userNoun(effectiveUsers);
-            if (selectedUsers > 0 && selectedUsers < totalUsers) {
-                btnUsers.textContent = `${t('header.usersIcon')} ${effectiveUsers}/${totalUsers} ${noun} ${jellyfinLabel}`;
-                return;
-            }
-            btnUsers.textContent = `${t('header.usersIcon')} ${effectiveUsers} ${noun} ${jellyfinLabel}`;
+            const value = selectedUsers > 0 && selectedUsers < totalUsers
+                ? `${effectiveUsers}/${totalUsers}`
+                : String(effectiveUsers);
+            btnUsers.textContent = t('header.jellyfinUsersCount', {
+                icon,
+                noun,
+                value
+            });
         }
 
         async function loadLang(lang) {
