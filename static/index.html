@@ -118,6 +118,10 @@
                     <div class="pill" id="cacheFiles">—</div>
                     <div class="pill" id="cacheSize">—</div>
                 </div>
+                <div style="display:flex; flex-direction:column; gap:6px; margin-top:8px;">
+                    <div class="pill" id="cacheProgress">—</div>
+                    <progress id="cacheProgressBar" max="100" value="0" style="width:100%; height:8px;"></progress>
+                </div>
                 <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:6px;">
                     <button id="btnCacheRefresh" class="pill">↻ <span id="cacheRefreshLabel">Refresh</span></button>
                     <button id="btnCacheClear" class="pill">🧹 <span id="cacheClearLabel">Clear + rebuild</span></button>
@@ -413,10 +417,39 @@
                 const phase = String(data.jobPhase || '');
                 const refreshLabel = document.getElementById('cacheRefreshLabel');
                 const clearLabel = document.getElementById('cacheClearLabel');
+                const progressEl = document.getElementById('cacheProgress');
+                const progressBar = document.getElementById('cacheProgressBar');
+                const processed = Number(data.jobProcessed || 0);
+                const total = Number(data.jobTotal || 0);
+                const percent = Math.max(0, Math.min(100, Number(data.jobPercent || 0)));
                 if (btnCacheRefresh) btnCacheRefresh.disabled = running;
                 if (btnCacheClear) btnCacheClear.disabled = running;
                 if (refreshLabel) refreshLabel.textContent = phase === 'refreshing' ? t('cache.refreshing') : t('cache.refresh');
                 if (clearLabel) clearLabel.textContent = phase === 'clearing' ? t('cache.clearing') : t('cache.clearRebuild');
+                if (progressEl) {
+                    if (running) {
+                        if (total > 0) {
+                            progressEl.textContent = t('cache.progressRunning', {
+                                processed,
+                                total,
+                                percent: Math.round(percent)
+                            });
+                        } else {
+                            progressEl.textContent = t('cache.progressPreparing', { processed });
+                        }
+                    } else if (processed > 0 || total > 0) {
+                        progressEl.textContent = t('cache.progressDone', { processed, total });
+                    } else {
+                        progressEl.textContent = t('cache.progressIdle');
+                    }
+                }
+                if (progressBar) {
+                    if (running && total <= 0) {
+                        progressBar.removeAttribute('value');
+                    } else {
+                        progressBar.value = running ? percent : (processed > 0 ? 100 : 0);
+                    }
+                }
                 if (cacheStatusTimer) {
                     clearTimeout(cacheStatusTimer);
                     cacheStatusTimer = null;
@@ -430,6 +463,10 @@
                 document.getElementById('cacheLast').textContent = t('cache.statusError');
                 document.getElementById('cacheFiles').textContent = '—';
                 document.getElementById('cacheSize').textContent = '—';
+                const progressEl = document.getElementById('cacheProgress');
+                const progressBar = document.getElementById('cacheProgressBar');
+                if (progressEl) progressEl.textContent = t('cache.statusError');
+                if (progressBar) progressBar.value = 0;
             }
         }
 
