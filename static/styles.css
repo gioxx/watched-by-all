@@ -223,6 +223,55 @@ input {
     font-size: 12px;
 }
 
+.footer-panel {
+    margin-top: 14px;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 12px 14px;
+    background: var(--surface);
+}
+
+.footer-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+}
+
+.footer-text {
+    min-width: 0;
+}
+
+.footer-title {
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.footer-meta {
+    margin-top: 2px;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.footer-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    white-space: nowrap;
+}
+
+.footer-actions > .pill {
+    box-sizing: border-box;
+    height: 32px;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+.footer-actions > .icon-btn {
+    min-width: 32px;
+}
+
 .modal-backdrop {
     position: fixed;
     inset: 0;

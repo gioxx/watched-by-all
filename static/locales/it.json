@@ -1,6 +1,7 @@
 {
   "title": "Watched",
   "header.users": "Utenti",
+  "header.usersCount": "{icon} {noun}",
   "header.summaryIcon": "ℹ️",
   "header.usersIcon": "👥",
   "header.langIcon": "🌐",
@@ -18,13 +19,15 @@
   "usersModal.selectNone": "Nessuno (tutti)",
   "usersModal.apply": "Applica + refresh",
   "usersModal.force": "Refresh forzato",
+  "label.user.one": "Utente",
+  "label.user.many": "Utenti",
   "label.usersDetected": "Utenti rilevati",
   "label.noPoster": "No poster",
   "label.viewed": "Visto",
   "label.playcount": "Numero riproduzioni: {count}",
   "label.tvSeries": "Serie TV",
   "button.episodesDetail": "Dettaglio episodi",
-  "summary.template": "{users} utenti · {movies} film · {seasons} stagioni · aggiornato: {date}",
+  "summary.template": "{users} {usersNoun} · {movies} film · {seasons} stagioni · aggiornato: {date}",
   "history.selectUser": "Seleziona utente",
   "history.noItems": "Nessun elemento",
   "detail.back": "← Indietro",
@@ -35,5 +38,8 @@
   "detail.viewed": "Visto",
   "detail.seriesInfo": "{series} · {count} episodio/i",
   "theme.light": "Passa al tema chiaro",
-  "theme.dark": "Passa al tema scuro"
+  "theme.dark": "Passa al tema scuro",
+  "footer.description": "Dashboard watched-by-all da Jellyfin per configurazioni multi-utente.",
+  "footer.versionLabel": "Versione",
+  "footer.repoLabel": "Repository GitHub"
 }

@@ -1,6 +1,7 @@
 {
   "title": "Watched",
   "header.users": "Users",
+  "header.usersCount": "{icon} {noun}",
   "header.summaryIcon": "ℹ️",
   "header.usersIcon": "👥",
   "header.langIcon": "🌐",
@@ -18,13 +19,15 @@
   "usersModal.selectNone": "None (all)",
   "usersModal.apply": "Apply + refresh",
   "usersModal.force": "Force refresh",
+  "label.user.one": "user",
+  "label.user.many": "users",
   "label.usersDetected": "Detected users",
   "label.noPoster": "No poster",
   "label.viewed": "Viewed",
   "label.playcount": "Playcount: {count}",
   "label.tvSeries": "TV Series",
   "button.episodesDetail": "Episode details",
-  "summary.template": "{users} users · {movies} movies · {seasons} seasons · updated: {date}",
+  "summary.template": "{users} {usersNoun} · {movies} movies · {seasons} seasons · updated: {date}",
   "history.selectUser": "Select user",
   "history.noItems": "No items",
   "detail.back": "← Back",
@@ -35,5 +38,8 @@
   "detail.viewed": "Viewed",
   "detail.seriesInfo": "{series} · {count} episode(s)",
   "theme.light": "Switch to light theme",
-  "theme.dark": "Switch to dark theme"
+  "theme.dark": "Switch to dark theme",
+  "footer.description": "Jellyfin watched-by-all dashboard for multi-user setups.",
+  "footer.versionLabel": "Version",
+  "footer.repoLabel": "GitHub repository"
 }

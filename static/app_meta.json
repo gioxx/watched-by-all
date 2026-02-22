@@ -1,0 +1,6 @@
+{
+  "name": "Watched",
+  "version": "0.0.0",
+  "repository": "https://github.com/gioxx/watched-by-all",
+  "description": "Jellyfin watched-by-all dashboard for multi-user setups."
+}
