@@ -6,7 +6,7 @@ import os
 import time
 import hashlib
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Set
 
 import httpx
 from fastapi import Body, FastAPI, Response
@@ -216,6 +216,7 @@ async def refresh_cache(force: bool = False, recache_thumbs: bool = False, low_p
         return
 
     processed_items = 0
+    referenced_thumb_files: Set[str] = set()
     for juid, _ in cache.users.items():
         try:
             items_resp = await jellyfin.get_user_items(juid)
@@ -250,6 +251,7 @@ async def refresh_cache(force: bool = False, recache_thumbs: bool = False, low_p
             elif series_primary_tag and it.get("SeriesId"):
                 thumb_url = _jellyfin_thumb(str(it.get("SeriesId")), series_primary_tag)
             thumb_url = await _cache_thumb(thumb_url, force=recache_thumbs)
+            _track_cached_thumb(thumb_url, referenced_thumb_files)
 
             ud = it.get("UserData", {}) or {}
             played_pct = 0.0
@@ -319,6 +321,7 @@ async def refresh_cache(force: bool = False, recache_thumbs: bool = False, low_p
                         "type": "show",
                         "thumb": await _cache_thumb(series_thumb_url or thumb_url, force=recache_thumbs),
                     }
+                    _track_cached_thumb(cache.jellyfin_meta[show_id].get("thumb", ""), referenced_thumb_files)
                 if season_id and season_id not in cache.jellyfin_meta:
                     cache.jellyfin_meta[season_id] = {
                         "ratingKey": season_id,
@@ -327,6 +330,7 @@ async def refresh_cache(force: bool = False, recache_thumbs: bool = False, low_p
                         "type": "season",
                         "thumb": await _cache_thumb(thumb_url, force=recache_thumbs),
                     }
+                    _track_cached_thumb(cache.jellyfin_meta[season_id].get("thumb", ""), referenced_thumb_files)
 
                 # Aggregate runtime per season once per episode
                 runtime_ticks = it.get("RunTimeTicks") or 0
@@ -345,6 +349,8 @@ async def refresh_cache(force: bool = False, recache_thumbs: bool = False, low_p
 
                 thumb_url = await _cache_thumb(thumb_url, force=recache_thumbs)
                 series_thumb_url = await _cache_thumb(series_thumb_url, force=recache_thumbs)
+                _track_cached_thumb(thumb_url, referenced_thumb_files)
+                _track_cached_thumb(series_thumb_url, referenced_thumb_files)
 
             event = {
                 "source": "jellyfin",
@@ -376,6 +382,9 @@ async def refresh_cache(force: bool = False, recache_thumbs: bool = False, low_p
                 thumb_cache_job_state["percent"] = (processed_items * 100.0 / total_items) if total_items > 0 else 0.0
             if low_priority and recache_thumbs and (processed_items % THUMB_REBUILD_BATCH == 0):
                 await asyncio.sleep(THUMB_REBUILD_PAUSE_MS / 1000.0)
+
+    if not recache_thumbs and cache.users and processed_items > 0:
+        _gc_unused_thumb_cache_files(referenced_thumb_files)
 
     user_ids = _effective_user_ids()
 
@@ -426,6 +435,34 @@ def _thumb_cache_path(url: str) -> str:
         return ""
     fname = hashlib.blake2b(url.encode("utf-8"), digest_size=16).hexdigest()  # deterministic key
     return os.path.join(THUMB_CACHE_DIR, f"{fname}.jpg")
+
+
+def _track_cached_thumb(local_url: str, referenced: Set[str]) -> None:
+    if not local_url or not local_url.startswith("/thumbs/"):
+        return
+    filename = local_url.split("/thumbs/", 1)[1].split("?", 1)[0].strip()
+    if filename:
+        referenced.add(filename)
+
+
+def _gc_unused_thumb_cache_files(referenced: Set[str]) -> int:
+    if not os.path.isdir(THUMB_CACHE_DIR):
+        return 0
+    removed = 0
+    try:
+        for entry in os.scandir(THUMB_CACHE_DIR):
+            if not entry.is_file():
+                continue
+            if entry.name in referenced:
+                continue
+            try:
+                os.remove(entry.path)
+                removed += 1
+            except Exception:
+                pass
+    except Exception:
+        return removed
+    return removed
 
 
 async def _cache_thumb(url: str, force: bool = False) -> str:
