@@ -351,10 +351,26 @@ h1 {
     margin-bottom: 22px;
 }
 
+.season-head {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 10px;
+}
+
+.season-meta-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
 .episode-list {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
     gap: 10px;
+    margin-top: 2px;
 }
 
 .episode {

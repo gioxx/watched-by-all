@@ -442,6 +442,8 @@
                       ? `<img src="${coverSrc}" alt="">`
                       : `<span class="muted">${t('label.noPoster')}</span>`;
                     const seriesId = g.meta?.seriesRatingKey || g.meta?.seriesId || g.items[0]?.seriesId || g.key || "";
+                    const selectedHistoryUser = allUsers.find(u => u.user_id === historyUser.value);
+                    const selectedHistoryUserName = selectedHistoryUser?.name || historyUser.value || "";
                     return `
         <div class="card">
           <div class="poster">
@@ -450,7 +452,7 @@
           <div class="meta">
             <div class="title">${header}</div>
             <div class="muted">${t('label.viewed')}: ${escapeHtml(lastDateStr)}</div>
-            <button class="pill" data-series-id="${seriesId}" data-series-name="${escapeHtml(header)}" style="padding:6px 10px; margin-top:6px;">${t('button.episodesDetail')}</button>
+            <button class="pill" data-series-id="${seriesId}" data-series-name="${escapeHtml(header)}" data-user-name="${escapeHtml(selectedHistoryUserName)}" style="padding:6px 10px; margin-top:6px;">${t('button.episodesDetail')}</button>
           </div>
         </div>`;
                 }).join('');
@@ -462,8 +464,9 @@
                     btn.addEventListener('click', () => {
                         const seriesId = btn.getAttribute('data-series-id') || '';
                         const seriesName = btn.getAttribute('data-series-name') || '';
+                        const userName = btn.getAttribute('data-user-name') || '';
                         if (!historyUser.value || !seriesId) return;
-                        const url = `/static/history_detail.html?user=${encodeURIComponent(historyUser.value)}&seriesId=${encodeURIComponent(seriesId)}&seriesName=${encodeURIComponent(seriesName)}`;
+                        const url = `/static/history_detail.html?user=${encodeURIComponent(historyUser.value)}&seriesId=${encodeURIComponent(seriesId)}&seriesName=${encodeURIComponent(seriesName)}&userName=${encodeURIComponent(userName)}`;
                         window.location.href = url;
                     });
                 });

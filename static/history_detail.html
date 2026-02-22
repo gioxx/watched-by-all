@@ -13,7 +13,7 @@
 <body>
     <header>
         <div class="header-left">
-            <button id="backBtn" class="pill" onclick="window.history.back()">← Back</button>
+            <button id="backBtn" class="pill" type="button">← Back</button>
             <div class="brand">
                 <img src="/static/watched_icon.webp" alt="" width="34" height="34" />
                 <div>
@@ -23,6 +23,7 @@
             </div>
         </div>
         <div class="header-actions">
+            <div id="detailUserPill" class="pill">👤 —</div>
             <select id="langSelect" class="pill lang-select" aria-label="Language">
                 <option value="en">EN</option>
                 <option value="it">IT</option>
@@ -39,6 +40,7 @@
         const userId = params.get('user') || '';
         const seriesId = params.get('seriesId') || '';
         const seriesName = params.get('seriesName') ? decodeURIComponent(params.get('seriesName')) : '';
+        const userName = params.get('userName') ? decodeURIComponent(params.get('userName')) : '';
 
         let translations = {};
         let currentLang = localStorage.getItem('lang') || 'en';
@@ -81,6 +83,8 @@
                 opt.textContent = `${t('header.langIcon')} ${code}`;
             });
             document.getElementById('themeToggle').setAttribute('aria-label', currentTheme === 'light' ? t('theme.dark') : t('theme.light'));
+            const analyzedUser = userName || userId || '—';
+            document.getElementById('detailUserPill').textContent = t('detail.analyzingUser', { user: analyzedUser });
         }
 
         document.getElementById('seriesTitle').textContent = seriesName || 'Series';
@@ -91,6 +95,14 @@
             localStorage.setItem('theme', currentTheme);
             document.getElementById('themeToggle').textContent = currentTheme === 'light' ? '☀️' : '🌙';
             document.getElementById('themeToggle').setAttribute('aria-label', currentTheme === 'light' ? t('theme.dark') : t('theme.light'));
+        }
+
+        function goBack() {
+            if (document.referrer && document.referrer.startsWith(window.location.origin)) {
+                window.history.back();
+                return;
+            }
+            window.location.href = '/';
         }
 
         async function loadDetail() {
@@ -155,11 +167,11 @@
                 }).join('');
                 return `<div class="season-block">
                     <div class="season-head">
-                        <div>
-                            <div class="epi-title section-title" style="padding-top:0;">${escapeHtml(name)}</div>
+                        <div class="epi-title section-title" style="padding-top:0;">${escapeHtml(name)}</div>
+                        <div class="season-meta-row">
                             <div class="epi-sub">${t('detail.lastViewed')}: ${escapeHtml(lastDateStr)}</div>
+                            <div class="epi-sub">${t('detail.episodesCount', {count: eps.length})}</div>
                         </div>
-                        <div class="epi-sub">${t('detail.episodesCount', {count: eps.length})}</div>
                     </div>
                     <div class="episode-list">${epiHtml}</div>
                 </div>`;
@@ -182,6 +194,8 @@
         document.getElementById('themeToggle').addEventListener('click', () => {
             applyTheme(currentTheme === 'light' ? 'dark' : 'light');
         });
+
+        document.getElementById('backBtn').addEventListener('click', goBack);
     </script>
 </body>
 </html>

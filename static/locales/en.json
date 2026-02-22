@@ -41,6 +41,7 @@
   "detail.episodesCount": "{count} episode(s)",
   "detail.viewed": "Viewed",
   "detail.seriesInfo": "{series} · {count} episode(s)",
+  "detail.analyzingUser": "👤 {user}",
   "theme.light": "Switch to light theme",
   "theme.dark": "Switch to dark theme",
   "footer.description": "Jellyfin watched-by-all dashboard for multi-user setups.",
