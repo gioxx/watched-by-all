@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, Set, Tuple, List, Any
+from typing import Dict, List, Any
 import time
 
 @dataclass
@@ -14,9 +14,6 @@ class Cache:
 
     # If empty, all users are considered. Otherwise only these user_ids.
     selected_user_ids: Set[str] = field(default_factory=set)
-
-    # Completion map: (user_id, rating_key) -> True
-    completed: Set[Tuple[str, str]] = field(default_factory=set)
 
     # Movie keys seen in history
     movies: Set[str] = field(default_factory=set)

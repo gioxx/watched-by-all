@@ -45,6 +45,11 @@ except ValueError:
 THUMB_MAX_WIDTH = max(0, THUMB_MAX_WIDTH)
 THUMB_MAX_HEIGHT = max(0, THUMB_MAX_HEIGHT)
 try:
+    THUMB_MAX_DOWNLOAD_BYTES = int(os.environ.get("THUMB_MAX_DOWNLOAD_BYTES", str(8 * 1024 * 1024)))
+except ValueError:
+    THUMB_MAX_DOWNLOAD_BYTES = 8 * 1024 * 1024
+THUMB_MAX_DOWNLOAD_BYTES = max(256 * 1024, THUMB_MAX_DOWNLOAD_BYTES)
+try:
     THUMB_REBUILD_BATCH = int(os.environ.get("THUMB_REBUILD_BATCH", "5"))
 except ValueError:
     THUMB_REBUILD_BATCH = 5
@@ -187,7 +192,6 @@ async def refresh_cache(force: bool = False, recache_thumbs: bool = False, low_p
         return
 
     cache.users.clear()
-    cache.completed.clear()
     cache.movies.clear()
     cache.shows.clear()
     cache.seasons.clear()
@@ -256,8 +260,6 @@ async def refresh_cache(force: bool = False, recache_thumbs: bool = False, low_p
 
             if typ == "movie":
                 cache.movies.add(item_id)
-                if is_completed:
-                    cache.completed.add((juid, item_id))
                 cache.user_movie_progress.setdefault(juid, {})
                 entry = cache.user_movie_progress[juid].setdefault(item_id, {"percent": 0.0, "completed": False})
                 entry["percent"] = max(entry.get("percent", 0.0), played_pct)
@@ -301,8 +303,6 @@ async def refresh_cache(force: bool = False, recache_thumbs: bool = False, low_p
                     cache.shows.add(show_id)
                 if season_id:
                     cache.seasons.add(season_id)
-                if is_completed:
-                    cache.completed.add((juid, item_id))
                 if show_id and is_completed:
                     cache.user_show_episodes.setdefault(juid, {})
                     cache.user_show_episodes[juid].setdefault(show_id, set()).add(item_id)
@@ -383,7 +383,7 @@ async def refresh_cache(force: bool = False, recache_thumbs: bool = False, low_p
     # Movies watched by all
     movies_by_all: List[str] = []
     for mk in cache.movies:
-        if all((uid, mk) in cache.completed for uid in user_ids):
+        if all(bool(cache.user_movie_progress.get(uid, {}).get(mk, {}).get("completed")) for uid in user_ids):
             movies_by_all.append(mk)
     cache.movies_by_all = sorted(movies_by_all, key=lambda x: int(x) if x.isdigit() else x)
 
@@ -393,13 +393,12 @@ async def refresh_cache(force: bool = False, recache_thumbs: bool = False, low_p
         eps = await _jellyfin_season_episode_keys(season_id)
         if not eps:
             continue
+        eps_set = set(eps)
         ok = True
         for uid in user_ids:
-            for epk in eps:
-                if (uid, epk) not in cache.completed:
-                    ok = False
-                    break
-            if not ok:
+            watched_eps = cache.user_season_episodes.get(uid, {}).get(season_id, set())
+            if not eps_set.issubset(watched_eps):
+                ok = False
                 break
         if ok:
             seasons_by_all.append(season_id)
@@ -444,10 +443,20 @@ async def _cache_thumb(url: str, force: bool = False) -> str:
 
     try:
         async with httpx.AsyncClient(timeout=THUMB_FETCH_TIMEOUT) as client:
-            r = await client.get(request_url)
+            r = await client.get(request_url, follow_redirects=True)
             r.raise_for_status()
+            content_length = int(r.headers.get("content-length") or "0")
+            if content_length > THUMB_MAX_DOWNLOAD_BYTES:
+                return url
+            body = bytearray()
+            async for chunk in r.aiter_bytes():
+                if not chunk:
+                    continue
+                body.extend(chunk)
+                if len(body) > THUMB_MAX_DOWNLOAD_BYTES:
+                    return url
             with open(fname, "wb") as dst:
-                dst.write(r.content)
+                dst.write(body)
             os.utime(fname, (now, now))
             return f"/thumbs/{os.path.basename(fname)}"
     except Exception:
