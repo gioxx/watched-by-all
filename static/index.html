@@ -112,20 +112,24 @@
                 <button id="btnCloseCache">Close</button>
             </div>
             <div class="modal-body">
-                <p id="cacheHelper" class="muted">Cache info and manual controls for thumbnails.</p>
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
+                    <div>
+                        <div id="cacheHelper" class="muted">Cache info and manual controls for thumbnails.</div>
+                    </div>
+                    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                        <button id="btnCacheRefresh" class="pill">↻ <span id="cacheRefreshLabel">Refresh</span></button>
+                        <button id="btnCacheClear" class="pill">🧹 <span id="cacheClearLabel">Clear + rebuild</span></button>
+                    </div>
+                </div>
                 <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; font-size:13px;">
                     <div class="pill" id="cacheLast">—</div>
                     <div class="pill" id="cacheFiles">—</div>
                     <div class="pill" id="cacheSize">—</div>
                 </div>
                 <div style="display:flex; flex-direction:column; gap:6px; margin-top:8px;">
-                    <div class="pill" id="cacheProgress">—</div>
-                    <div class="pill" id="cacheEta">—</div>
+                    <div class="pill" id="cacheProgress" style="display:flex; width:100%; justify-content:flex-start;">—</div>
+                    <div class="pill" id="cacheEta" style="display:flex; width:100%; justify-content:flex-start;">—</div>
                     <progress id="cacheProgressBar" max="100" value="0" style="width:100%; height:8px;"></progress>
-                </div>
-                <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:6px;">
-                    <button id="btnCacheRefresh" class="pill">↻ <span id="cacheRefreshLabel">Refresh</span></button>
-                    <button id="btnCacheClear" class="pill">🧹 <span id="cacheClearLabel">Clear + rebuild</span></button>
                 </div>
             </div>
         </div>
