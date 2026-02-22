@@ -541,7 +541,11 @@ async def _run_thumb_cache_job(clear_first: bool = False) -> None:
     try:
         if clear_first:
             _clear_thumb_cache_files()
-        await refresh_cache(force=True, recache_thumbs=True, low_priority=True)
+            # Heavy job: rebuild cache from scratch.
+            await refresh_cache(force=True, recache_thumbs=True, low_priority=True)
+        else:
+            # Lightweight refresh: update data and refresh thumbnails only when missing/expired.
+            await refresh_cache(force=True, recache_thumbs=False, low_priority=False)
         total_items = int(thumb_cache_job_state.get("total") or 0)
         done_items = int(thumb_cache_job_state.get("processed") or 0)
         if total_items > 0:
