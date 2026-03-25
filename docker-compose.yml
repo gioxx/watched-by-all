@@ -10,3 +10,5 @@ services:
       - WATCH_THRESHOLD=0.95
       - REFRESH_MINUTES=30
     restart: unless-stopped
+    cpus: 0.5
+    mem_limit: 1g

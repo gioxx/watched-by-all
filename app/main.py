@@ -29,11 +29,6 @@ THUMB_CACHE_DIR = os.environ.get("THUMB_CACHE_DIR", "thumb_cache").strip() or "t
 THUMB_CACHE_TTL_HOURS = float(os.environ.get("THUMB_CACHE_TTL_HOURS", "72"))
 THUMB_FETCH_TIMEOUT = float(os.environ.get("THUMB_FETCH_TIMEOUT", "5.0"))
 INTERNAL_HTTP_BASE = os.environ.get("INTERNAL_HTTP_BASE", "http://127.0.0.1:8088").strip()
-JELLYFIN_TIMEOUT = float(os.environ.get("JELLYFIN_TIMEOUT", "5.0"))
-THUMB_CACHE_DIR = os.environ.get("THUMB_CACHE_DIR", "thumb_cache").strip() or "thumb_cache"
-THUMB_CACHE_TTL_HOURS = float(os.environ.get("THUMB_CACHE_TTL_HOURS", "72"))
-THUMB_FETCH_TIMEOUT = float(os.environ.get("THUMB_FETCH_TIMEOUT", "5.0"))
-JELLYFIN_TIMEOUT = float(os.environ.get("JELLYFIN_TIMEOUT", "5.0"))
 try:
     THUMB_MAX_HEIGHT = int(os.environ.get("THUMB_MAX_HEIGHT", "500"))
 except ValueError:
@@ -77,9 +72,12 @@ thumb_cache_job_state: Dict[str, Any] = {
 }
 thumb_cache_job_task: asyncio.Task | None = None
 
-# Negative cache for missing images
+# Negative cache for confirmed missing images
 MISSING_IMAGE_CACHE: Dict[str, float] = {}
 MISSING_IMAGE_TTL_SECONDS = 600  # 10 minutes
+
+# Track in-flight image fetches to avoid concurrent storms
+INFLIGHT_IMAGE_REQUESTS: Dict[str, asyncio.Lock] = {}
 
 # Local placeholder returned when Jellyfin has no poster
 PLACEHOLDER_IMAGE = Path("static/poster-missing.jpg")
@@ -601,6 +599,7 @@ async def _run_thumb_cache_job(clear_first: bool = False) -> None:
             # Heavy job: rebuild cache from scratch.
             _clear_thumb_cache_files()
             MISSING_IMAGE_CACHE.clear()
+            INFLIGHT_IMAGE_REQUESTS.clear()
             await refresh_cache(force=True, recache_thumbs=True, low_priority=True)
         else:
             # Lightweight refresh: update data and refresh thumbnails only when missing/expired.
@@ -679,69 +678,84 @@ async def image_proxy(
     cache_key = _missing_image_cache_key(item_id, tag, maxHeight)
     now = time.time()
 
+    # Fast path: confirmed missing image
     expires_at = MISSING_IMAGE_CACHE.get(cache_key)
     if expires_at is not None:
         if expires_at > now:
-            if PLACEHOLDER_IMAGE.exists():
-                return _placeholder_response()
-            return JSONResponse({"error": "image not found"}, status_code=404)
+            return _placeholder_response() if PLACEHOLDER_IMAGE.exists() else JSONResponse(
+                {"error": "image not found"}, status_code=404
+            )
         MISSING_IMAGE_CACHE.pop(cache_key, None)
 
-    base_url = JELLYFIN_URL.rstrip("/")
-    url = f"{base_url}/Items/{item_id}/Images/Primary"
-    headers = {"X-Emby-Token": JELLYFIN_APIKEY}
+    # Serialize concurrent fetches for the same image
+    lock = INFLIGHT_IMAGE_REQUESTS.setdefault(cache_key, asyncio.Lock())
 
-    params: Dict[str, Any] = {}
-    if THUMB_MAX_HEIGHT > 0:
-        effective_height = maxHeight if (maxHeight is not None and maxHeight > 0) else THUMB_MAX_HEIGHT
-        params["maxHeight"] = min(effective_height, THUMB_MAX_HEIGHT)
-    elif maxHeight is not None and maxHeight > 0:
-        params["maxHeight"] = maxHeight
+    async with lock:
+        # Re-check negative cache after waiting for the lock
+        now = time.time()
+        expires_at = MISSING_IMAGE_CACHE.get(cache_key)
+        if expires_at is not None:
+            if expires_at > now:
+                return _placeholder_response() if PLACEHOLDER_IMAGE.exists() else JSONResponse(
+                    {"error": "image not found"}, status_code=404
+                )
+            MISSING_IMAGE_CACHE.pop(cache_key, None)
 
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        try:
-            tagged_params = dict(params)
-            if tag:
-                tagged_params["tag"] = tag
+        base_url = JELLYFIN_URL.rstrip("/")
+        url = f"{base_url}/Items/{item_id}/Images/Primary"
+        headers = {"X-Emby-Token": JELLYFIN_APIKEY}
 
-            response = await client.get(url, headers=headers, params=tagged_params)
+        params: Dict[str, Any] = {}
+        if THUMB_MAX_HEIGHT > 0:
+            effective_height = maxHeight if (maxHeight is not None and maxHeight > 0) else THUMB_MAX_HEIGHT
+            params["maxHeight"] = min(effective_height, THUMB_MAX_HEIGHT)
+        elif maxHeight is not None and maxHeight > 0:
+            params["maxHeight"] = maxHeight
 
-            if response.status_code == 404 and tag:
-                print(f"Image not found with tag for {item_id} ({tag}), retrying without tag...")
-                response = await client.get(url, headers=headers, params=params)
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            try:
+                tagged_params = dict(params)
+                if tag:
+                    tagged_params["tag"] = tag
 
-            if response.status_code == 404:
-                print(f"Image still not found for {item_id} ({tag or 'no-tag'})")
-                MISSING_IMAGE_CACHE[cache_key] = time.time() + MISSING_IMAGE_TTL_SECONDS
+                response = await client.get(url, headers=headers, params=tagged_params)
 
+                if response.status_code == 404 and tag:
+                    print(f"Image not found with tag for {item_id} ({tag}), retrying without tag...")
+                    response = await client.get(url, headers=headers, params=params)
+
+                if response.status_code == 404:
+                    print(f"Image still not found for {item_id} ({tag or 'no-tag'})")
+                    MISSING_IMAGE_CACHE[cache_key] = time.time() + MISSING_IMAGE_TTL_SECONDS
+
+                    if PLACEHOLDER_IMAGE.exists():
+                        return _placeholder_response()
+
+                    return JSONResponse({"error": "image not found"}, status_code=404)
+
+                response.raise_for_status()
+
+            except httpx.RequestError as exc:
+                print(f"Image proxy failed for {item_id} ({tag or 'no-tag'}): {exc}")
                 if PLACEHOLDER_IMAGE.exists():
                     return _placeholder_response()
+                return JSONResponse({"error": "image fetch failed"}, status_code=502)
 
-                return JSONResponse({"error": "image not found"}, status_code=404)
+            except httpx.HTTPStatusError as exc:
+                print(f"Image proxy failed for {item_id} ({tag or 'no-tag'}): {exc}")
 
-            response.raise_for_status()
+                if exc.response is not None and exc.response.status_code == 404:
+                    MISSING_IMAGE_CACHE[cache_key] = time.time() + MISSING_IMAGE_TTL_SECONDS
+                    if PLACEHOLDER_IMAGE.exists():
+                        return _placeholder_response()
 
-        except httpx.RequestError as exc:
-            print(f"Image proxy failed for {item_id} ({tag or 'no-tag'}): {exc}")
-            if PLACEHOLDER_IMAGE.exists():
-                return _placeholder_response()
-            return JSONResponse({"error": "image fetch failed"}, status_code=502)
+                status_code = exc.response.status_code if exc.response is not None else 502
+                return JSONResponse({"error": "image fetch failed"}, status_code=status_code)
 
-        except httpx.HTTPStatusError as exc:
-            print(f"Image proxy failed for {item_id} ({tag or 'no-tag'}): {exc}")
-
-            if exc.response is not None and exc.response.status_code == 404:
-                MISSING_IMAGE_CACHE[cache_key] = time.time() + MISSING_IMAGE_TTL_SECONDS
-                if PLACEHOLDER_IMAGE.exists():
-                    return _placeholder_response()
-
-            status_code = exc.response.status_code if exc.response is not None else 502
-            return JSONResponse({"error": "image fetch failed"}, status_code=status_code)
-
-    media_type = response.headers.get("content-type", "image/jpeg")
-    proxy_response = Response(content=response.content, media_type=media_type)
-    proxy_response.headers["Cache-Control"] = f"public, max-age={IMAGE_CACHE_SECONDS}"
-    return proxy_response
+        media_type = response.headers.get("content-type", "image/jpeg")
+        proxy_response = Response(content=response.content, media_type=media_type)
+        proxy_response.headers["Cache-Control"] = f"public, max-age={IMAGE_CACHE_SECONDS}"
+        return proxy_response
 
 
 def _dedupe_completed_events(events: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
