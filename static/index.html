@@ -7,7 +7,12 @@
     <title>Watched</title>
     <link rel="icon" type="image/webp" href="/static/watched_icon.webp" />
     <link rel="stylesheet" href="/static/styles.css" />
-    <link rel="stylesheet" href="/static/tailwind.css" />
+    <script>
+        (() => {
+            const pref = localStorage.getItem('theme-preference') || 'system';
+            if (pref === 'light' || pref === 'dark') document.documentElement.setAttribute('data-theme', pref);
+        })();
+    </script>
 </head>
 
 <body>
@@ -20,20 +25,24 @@
             <img src="/static/watched_icon.webp" alt="" width="44" height="44" aria-hidden="true" />
             <span id="brandTitle">Watched</span>
         </div>
-        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
-            <button id="btnUsers" class="pill" style="cursor:pointer;">👤 Users</button>
+        <div class="header-actions">
+            <button id="btnUsers" class="pill">👤 Users</button>
             <div id="summary" class="pill">ℹ️ Loading…</div>
-            <button id="btnCache" class="pill" style="cursor:pointer;">🗂️ Cache</button>
-            <select id="langSelect" class="pill lang-select" style="cursor:pointer;">
-                <option value="en">EN</option>
-                <option value="it">IT</option>
-            </select>
-            <button id="themeToggle" class="pill icon-btn" type="button" aria-label="Toggle theme">🌙</button>
+            <button id="btnCache" class="pill">🗂️ Cache</button>
+            <div class="lang-switcher" id="langSwitcher" role="group" aria-label="Language">
+                <button type="button" class="lang-btn" data-lang="en">EN</button>
+                <button type="button" class="lang-btn" data-lang="it">IT</button>
+            </div>
+            <div class="theme-switcher" id="themeSwitcher" role="group" aria-label="Theme">
+                <button type="button" class="theme-btn" data-theme-value="system">System</button>
+                <button type="button" class="theme-btn" data-theme-value="dark">Dark</button>
+                <button type="button" class="theme-btn" data-theme-value="light">Light</button>
+            </div>
         </div>
     </header>
 
     <main>
-        <div id="backendStatus" style="display:none; margin-bottom:10px; padding:10px 12px; border-radius:12px; border:1px solid #613b2f; background:#2d1a15; color:#f3d9d0; font-weight:600;">
+        <div id="backendStatus" class="backend-status" style="display:none;">
             ⚠️ Jellyfin unreachable. Check URL/network and retry.
         </div>
         <section class="panel content-panel">
@@ -75,33 +84,23 @@
         </section>
     </main>
 
-        <div id="usersModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.55);">
-        <div style="max-width:720px; margin:8vh auto; background:var(--surface); border:1px solid var(--border); border-radius:16px; overflow:hidden;">
-            <div style="display:flex; justify-content:space-between; align-items:center; padding:14px 14px; border-bottom:1px solid var(--border);">
+        <div id="usersModal" class="modal-backdrop" style="display:none;">
+        <div class="modal-panel" style="max-width:720px;">
+            <div class="modal-header">
                 <div style="font-weight:700;" data-i18n="users.title">Selected users</div>
                 <button id="btnCloseUsers">Close</button>
             </div>
-            <div style="padding:14px 14px; display:flex; flex-direction:column; gap:10px;">
+            <div class="modal-body">
                 <div class="muted" data-i18n="users.note">If you do not select anyone, <b>all</b> users will be considered.</div>
                 <div class="muted" data-i18n="label.usersDetected">Detected users</div>
-                <div id="usersList" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap:10px;"></div>
-                <div style="display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap; padding-top:6px;">
+                <div id="usersList" class="users-list"></div>
+                <div class="modal-footer">
                     <button id="btnSelectAll">Select all</button>
                     <button id="btnSelectNone">None (all)</button>
                     <button id="btnApplyUsers">Apply + refresh</button>
                     <button id="btnForceRefresh">Force refresh</button>
                 </div>
             </div>
-        </div>
-    </div>
-
-    <div id="historyModal" class="modal-backdrop">
-        <div class="modal-panel">
-            <div class="modal-header">
-                <div id="historyModalTitle" style="font-weight:700;"></div>
-                <button id="btnCloseHistory">Chiudi</button>
-            </div>
-            <div class="modal-body" id="historyModalBody"></div>
         </div>
     </div>
 
@@ -210,8 +209,8 @@
             backendStatus.style.display = visible ? 'block' : 'none';
         }
 
-        let currentTheme = localStorage.getItem('theme') || 'dark';
-        document.body.setAttribute('data-theme', currentTheme);
+        const THEME_KEY = 'theme-preference';
+        let currentTheme = localStorage.getItem(THEME_KEY) || 'system';
 
         const grid = document.getElementById('grid');
         const summary = document.getElementById('summary');
@@ -223,7 +222,6 @@
         const refreshBtn = document.getElementById('refresh');
 
         const btnUsers = document.getElementById('btnUsers');
-        const langSelect = document.getElementById('langSelect');
         const usersModal = document.getElementById('usersModal');
         const btnCloseUsers = document.getElementById('btnCloseUsers');
         const usersList = document.getElementById('usersList');
@@ -233,11 +231,6 @@
         const btnForceRefresh = document.getElementById('btnForceRefresh');
         const historyControls = document.getElementById('historyControls');
         const historyUser = document.getElementById('historyUser');
-        const historyModal = document.getElementById('historyModal');
-        const historyModalTitle = document.getElementById('historyModalTitle');
-        const historyModalBody = document.getElementById('historyModalBody');
-        const btnCloseHistory = document.getElementById('btnCloseHistory');
-        const themeToggle = document.getElementById('themeToggle');
         const btnCache = document.getElementById('btnCache');
         const cacheModal = document.getElementById('cacheModal');
         const btnCloseCache = document.getElementById('btnCloseCache');
@@ -304,15 +297,8 @@
             btnApplyUsers.textContent = t('usersModal.apply');
             btnForceRefresh.textContent = t('usersModal.force');
 
-            langSelect.value = currentLang;
-            langSelect.querySelectorAll('option').forEach(opt => {
-                const code = (opt.value || '').toUpperCase();
-                opt.textContent = `${t('header.langIcon')} ${code}`;
-            });
-
-            if (themeToggle) {
-                themeToggle.setAttribute('aria-label', currentTheme === 'light' ? t('theme.dark') : t('theme.light'));
-            }
+            updateLangSwitcher();
+            updateThemeSwitcher();
             if (btnCloseCache) btnCloseCache.textContent = t('usersModal.close');
             const cacheTitleEl = document.getElementById('cacheTitle');
             const cacheHelperEl = document.getElementById('cacheHelper');
@@ -329,17 +315,30 @@
         let allUsers = [];
         let selectedUserIds = new Set();
 
-        function applyTheme(theme) {
-            currentTheme = theme === 'light' ? 'light' : 'dark';
-            document.body.setAttribute('data-theme', currentTheme);
-            localStorage.setItem('theme', currentTheme);
-            if (themeToggle) {
-                themeToggle.textContent = currentTheme === 'light' ? '☀️' : '🌙';
-                themeToggle.setAttribute('aria-label', currentTheme === 'light' ? t('theme.dark') : t('theme.light'));
+        function applyTheme(pref) {
+            currentTheme = (pref === 'light' || pref === 'dark') ? pref : 'system';
+            if (currentTheme === 'light' || currentTheme === 'dark') {
+                document.documentElement.setAttribute('data-theme', currentTheme);
+            } else {
+                document.documentElement.removeAttribute('data-theme');
             }
+            localStorage.setItem(THEME_KEY, currentTheme);
+            updateThemeSwitcher();
         }
 
-        function openUsers() { usersModal.style.display = 'block'; }
+        function updateThemeSwitcher() {
+            document.querySelectorAll('[data-theme-value]').forEach(btn => {
+                btn.classList.toggle('is-active', btn.dataset.themeValue === currentTheme);
+            });
+        }
+
+        function updateLangSwitcher() {
+            document.querySelectorAll('.lang-btn[data-lang]').forEach(btn => {
+                btn.classList.toggle('is-active', btn.dataset.lang === currentLang);
+            });
+        }
+
+        function openUsers() { usersModal.style.display = 'flex'; }
         function closeUsers() { usersModal.style.display = 'none'; }
         function openCacheModal() { cacheModal.style.display = 'flex'; }
         function closeCacheModal() { cacheModal.style.display = 'none'; }
@@ -348,7 +347,7 @@
             usersList.innerHTML = allUsers.map(u => {
                 const checked = selectedUserIds.has(u.user_id) ? 'checked' : '';
                 return `
-        <label style="display:flex; gap:10px; align-items:center; border:1px solid var(--border); border-radius:12px; padding:10px;">
+        <label class="user-item">
           <input type="checkbox" data-user-id="${u.user_id}" ${checked} />
           <span>${escapeHtml(u.name)} <span class="muted ellipsis">(${escapeHtml(u.user_id)})</span></span>
         </label>
@@ -565,12 +564,6 @@
       `;
         }
 
-        function escapeHtml(s) {
-            return String(s || '').replace(/[&<>"']/g, (c) => ({
-                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-            }[c]));
-        }
-
         function render() {
             const q = search.value.trim().toLowerCase();
             const filtered = q ? items.filter(i => (i.title || '').toLowerCase().includes(q)) : items;
@@ -784,29 +777,20 @@
             await forceRefresh();
         });
 
-        langSelect.addEventListener('change', async (e) => {
-            await loadLang(e.target.value);
-            await loadSummary();
-            await loadItems();
+        document.querySelectorAll('.lang-btn[data-lang]').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                await loadLang(btn.dataset.lang);
+                updateLangSwitcher();
+                await loadSummary();
+                await loadItems();
+            });
         });
 
-        themeToggle.addEventListener('click', () => {
-            applyTheme(currentTheme === 'light' ? 'dark' : 'light');
+        document.querySelectorAll('[data-theme-value]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                applyTheme(btn.dataset.themeValue);
+            });
         });
-
-        function openHistoryModal(title, epis) {
-            historyModalTitle.textContent = title || 'Dettaglio episodi';
-            historyModalBody.innerHTML = epis.map(historyHTML).join('');
-            historyModal.style.display = 'flex';
-        }
-
-        function closeHistoryModal() {
-            historyModal.style.display = 'none';
-            historyModalBody.innerHTML = '';
-        }
-
-        btnCloseHistory.addEventListener('click', closeHistoryModal);
-        historyModal.addEventListener('click', (e) => { if (e.target === historyModal) closeHistoryModal(); });
 
         historyUser.addEventListener('change', async () => {
             if (mode === 'history') {

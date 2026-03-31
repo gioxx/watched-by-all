@@ -48,8 +48,8 @@
   "label.episode.one": "episode",
   "label.episode.many": "episodes",
   "detail.analyzingUser": "👤 {user}",
-  "theme.light": "Switch to light theme",
-  "theme.dark": "Switch to dark theme",
+  "theme.light": "Light",
+  "theme.dark": "Dark",
   "cache.title": "Poster cache",
   "cache.helper": "Cache info and manual controls for thumbnails.",
   "cache.refresh": "Refresh",
@@ -73,5 +73,8 @@
   "cache.statusError": "Cache status unavailable.",
   "footer.description": "Jellyfin watched-by-all dashboard for multi-user setups.",
   "footer.versionLabel": "Version",
-  "footer.repoLabel": "GitHub repository"
+  "footer.repoLabel": "GitHub repository",
+  "loading": "Loading data…",
+  "loadingError": "⚠️ Jellyfin unreachable. Check URL/network and retry.",
+  "theme.system": "System"
 }
