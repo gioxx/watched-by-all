@@ -456,11 +456,10 @@ input {
     font-size: 12px;
 }
 
-/* Pill inside card meta: always full-width */
+/* Pill inside card meta: fixed size based on content, consistent across all cards */
 .meta .pill {
-    width: 100%;
+    align-self: flex-start;
     margin-top: 4px;
-    justify-content: center;
 }
 
 /* ===== SECTION TITLE ===== */
