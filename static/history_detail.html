@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Watched: Episodes details</title>
     <link rel="icon" type="image/webp" href="/static/watched_icon.webp" />
-    <link rel="stylesheet" href="/static/styles.css?v=0.5.5" />
+    <link rel="stylesheet" href="/static/styles.css?v=0.5.6" />
     <script>
         (() => {
             const pref = localStorage.getItem('theme-preference') || 'system';
@@ -24,7 +24,7 @@
         <div class="header-left">
             <button id="backBtn" class="pill" type="button">← Back</button>
             <div class="brand">
-                <img src="/static/watched_icon.webp" alt="" width="34" height="34" />
+                <a href="/" aria-label="Watched — home"><img src="/static/watched_icon.webp" alt="" width="34" height="34" /></a>
                 <div>
                     <h1 id="seriesTitle">Serie</h1>
                     <div class="muted" id="seriesInfo"></div>
