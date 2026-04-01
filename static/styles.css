@@ -165,9 +165,9 @@ header {
     font-size: 12px;
     padding: 6px 10px;
     border: 1px solid var(--border);
-    border-radius: 999px;
+    border-radius: 10px;
     color: var(--text);
-    background: var(--surface-strong);
+    background: var(--surface-2);
     text-decoration: none;
     display: inline-flex;
     align-items: center;
