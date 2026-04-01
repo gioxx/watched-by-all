@@ -163,7 +163,8 @@ header {
 
 .pill {
     font-size: 12px;
-    padding: 6px 10px;
+    height: 2.25rem;
+    padding: 0 10px;
     border: 1px solid var(--border);
     border-radius: 10px;
     color: var(--text);
@@ -202,10 +203,12 @@ button.pill:hover {
     display: inline-flex;
     align-items: center;
     gap: 2px;
+    height: 2.25rem;
     padding: 3px;
     border: 1px solid var(--border);
     border-radius: 10px;
     background: var(--surface-2);
+    box-sizing: border-box;
 }
 
 .theme-switcher > button,
