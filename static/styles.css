@@ -201,20 +201,20 @@ button.pill:hover {
 .lang-switcher {
     display: inline-flex;
     align-items: center;
-    gap: 0.2rem;
-    padding: 0.2rem;
+    gap: 2px;
+    padding: 3px;
     border: 1px solid var(--border);
-    border-radius: 8px;
-    background: var(--surface-strong);
+    border-radius: 10px;
+    background: var(--surface-2);
 }
 
 .theme-switcher > button,
 .lang-switcher > button {
-    height: 1.65rem;
-    padding: 0 0.7rem;
-    border-radius: 6px;
-    border: 0;
-    background: transparent;
+    height: 1.75rem;
+    padding: 0 0.75rem;
+    border-radius: 7px;
+    border: 0 !important;
+    background: transparent !important;
     color: var(--muted);
     font-size: 0.78rem;
     font-weight: 700;
@@ -222,18 +222,20 @@ button.pill:hover {
     transition: background .15s, color .15s;
     font-family: inherit;
     letter-spacing: 0;
+    box-shadow: none !important;
 }
 
 .theme-switcher > button.is-active,
 .lang-switcher > button.is-active {
-    background: var(--accent);
-    color: var(--accent-text);
+    background: var(--accent) !important;
+    color: var(--accent-text) !important;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, .3) !important;
 }
 
 .theme-switcher > button:not(.is-active):hover,
 .lang-switcher > button:not(.is-active):hover {
     color: var(--text);
-    background: transparent;
+    background: color-mix(in srgb, var(--accent) 12%, transparent) !important;
 }
 
 /* ===== FOCUS STATES ===== */
