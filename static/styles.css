@@ -456,6 +456,13 @@ input {
     font-size: 12px;
 }
 
+/* Pill inside card meta: always full-width */
+.meta .pill {
+    width: 100%;
+    margin-top: 4px;
+    justify-content: center;
+}
+
 /* ===== SECTION TITLE ===== */
 
 .section-title {
