@@ -13,6 +13,7 @@ img, video, canvas, svg {
 
 /* Default: dark — Jellyfin brand palette */
 :root {
+    --dot-color: rgba(255, 255, 255, 0.038);
     --color-scheme: dark;
     --bg: #101010;
     --bg-soft: #181818;
@@ -35,6 +36,7 @@ img, video, canvas, svg {
 /* System: light preference */
 @media (prefers-color-scheme: light) {
     html:not([data-theme="dark"]) {
+        --dot-color: rgba(0, 0, 0, 0.05);
         --color-scheme: light;
         --bg: #f5f5f5;
         --bg-soft: #ececec;
@@ -57,6 +59,7 @@ img, video, canvas, svg {
 
 /* Forced dark */
 html[data-theme="dark"] {
+    --dot-color: rgba(255, 255, 255, 0.038);
     --color-scheme: dark;
     --bg: #101010;
     --bg-soft: #181818;
@@ -78,6 +81,7 @@ html[data-theme="dark"] {
 
 /* Forced light */
 html[data-theme="light"] {
+    --dot-color: rgba(0, 0, 0, 0.05);
     --color-scheme: light;
     --bg: #f5f5f5;
     --bg-soft: #ececec;
@@ -98,6 +102,21 @@ html[data-theme="light"] {
 }
 
 /* ===== GLOBAL ===== */
+
+body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image: radial-gradient(circle at 1px 1px, var(--dot-color) 1px, transparent 0);
+    background-size: 28px 28px;
+}
+
+body > * {
+    position: relative;
+    z-index: 1;
+}
 
 body {
     margin: 0;
@@ -679,6 +698,42 @@ h1 {
 .epi-sub {
     color: var(--muted);
     font-size: 12px;
+}
+
+/* ===== SCROLL TO TOP ===== */
+
+.scroll-top-btn {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 50;
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    color: var(--muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(10px);
+    transition: opacity .2s, transform .2s, border-color .15s, background .15s, color .15s;
+}
+
+.scroll-top-btn.visible {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+}
+
+.scroll-top-btn:hover {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent-veil) 60%, var(--surface-2));
+    color: var(--accent);
 }
 
 /* ===== USERS MODAL ===== */
