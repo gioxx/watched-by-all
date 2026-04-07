@@ -48,8 +48,8 @@
   "label.episode.one": "episodio",
   "label.episode.many": "episodi",
   "detail.analyzingUser": "👤 {user}",
-  "theme.light": "Passa al tema chiaro",
-  "theme.dark": "Passa al tema scuro",
+  "theme.light": "Chiaro",
+  "theme.dark": "Scuro",
   "cache.title": "Cache locandine",
   "cache.helper": "Info cache e controlli manuali per le copertine.",
   "cache.refresh": "Aggiorna",
@@ -73,5 +73,8 @@
   "cache.statusError": "Stato cache non disponibile.",
   "footer.description": "Dashboard watched-by-all da Jellyfin per configurazioni multi-utente.",
   "footer.versionLabel": "Versione",
-  "footer.repoLabel": "Repository GitHub"
+  "footer.repoLabel": "Repository GitHub",
+  "loading": "Caricamento dati…",
+  "loadingError": "⚠️ Jellyfin non raggiungibile. Controlla URL/rete e riprova.",
+  "theme.system": "Sistema"
 }
