@@ -30,16 +30,11 @@
         </button>
         <div class="header-actions" id="headerActions">
             <button id="btnUsers" class="pill">👤 Users</button>
-            <div id="summary" class="pill">ℹ️ Loading…</div>
+            <div id="summary" class="pill summary-stats">ℹ️ Loading…</div>
             <button id="btnCache" class="pill">🗂️ Cache</button>
             <div class="lang-switcher" id="langSwitcher" role="group" aria-label="Language">
                 <button type="button" class="lang-btn" data-lang="en">EN</button>
                 <button type="button" class="lang-btn" data-lang="it">IT</button>
-            </div>
-            <div class="theme-switcher" id="themeSwitcher" role="group" aria-label="Theme">
-                <button type="button" class="theme-btn" data-theme-value="system">System</button>
-                <button type="button" class="theme-btn" data-theme-value="dark">Dark</button>
-                <button type="button" class="theme-btn" data-theme-value="light">Light</button>
             </div>
         </div>
     </header>
@@ -76,6 +71,11 @@
                     <div class="footer-meta" id="footerProjectDesc">Jellyfin watched-by-all dashboard.</div>
                 </div>
                 <div class="footer-actions">
+                    <div class="theme-switcher" id="themeSwitcher" role="group" aria-label="Theme">
+                        <button type="button" class="theme-btn" data-theme-value="system">System</button>
+                        <button type="button" class="theme-btn" data-theme-value="dark">Dark</button>
+                        <button type="button" class="theme-btn" data-theme-value="light">Light</button>
+                    </div>
                     <div class="pill" id="footerVersion">Version —</div>
                     <a class="pill icon-btn" id="footerRepoLink" href="https://github.com/gioxx/watched-by-all" target="_blank" rel="noopener noreferrer" aria-label="GitHub repository" title="GitHub repository">
                         <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -648,20 +648,17 @@
                 const movies = Number(s.moviesByAll ?? 0);
                 const seasons = Number(s.showsByAll ?? 0);
                 summaryUsersCount = users;
-                summary.textContent = `${t('header.summaryIcon')} ${t('summary.template', {
-                    users,
-                    usersNoun: userNoun(users),
-                    movies,
-                    moviesNoun: movieNoun(movies),
-                    seasons,
-                    seasonsNoun: seasonNoun(seasons),
-                    date
-                })}`;
+                summary.innerHTML = [
+                    `<span class="summary-item">👤 ${users} ${escapeHtml(userNoun(users))}</span>`,
+                    `<span class="summary-item">🎬 ${movies} ${escapeHtml(movieNoun(movies))}</span>`,
+                    `<span class="summary-item">📺 ${seasons} ${escapeHtml(seasonNoun(seasons))}</span>`,
+                    `<span class="summary-item">ℹ️ ${escapeHtml(t('summary.updatedPrefix'))}: ${escapeHtml(date)}</span>`
+                ].join('');
                 renderUsersPill();
                 setBackendStatus('', false);
             } catch (e) {
                 setBackendStatus(t('loadingError') || '⚠️ Jellyfin unreachable. Retry.', true);
-                summary.textContent = `${t('header.summaryIcon')} —`;
+                summary.innerHTML = `<span class="summary-item">ℹ️ —</span>`;
                 renderUsersPill();
             }
         }

@@ -775,6 +775,42 @@ h1 {
     padding-top: 6px;
 }
 
+/* ===== SUMMARY STATS ===== */
+
+.summary-stats {
+    height: auto !important;
+    min-height: 2.25rem;
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    gap: 0;
+}
+
+.summary-item + .summary-item::before {
+    content: " · ";
+    color: var(--muted);
+    padding: 0 1px;
+}
+
+/* ===== EPISODE INFO ===== */
+
+.episode-info {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* ===== FOOTER THEME SWITCHER ===== */
+
+.footer-actions > .theme-switcher {
+    height: 32px;
+}
+
+.footer-actions > .theme-switcher > button {
+    height: 26px;
+}
+
 /* ===== HAMBURGER BUTTON ===== */
 
 .hamburger-btn {
@@ -831,6 +867,34 @@ h1 {
 
     .brand {
         flex: 1;
+        min-width: 0;
+    }
+
+    /* Detail page: constrain header-left and truncate series title */
+    .header-left {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+    }
+
+    .header-left .brand {
+        white-space: normal;
+        min-width: 0;
+    }
+
+    #seriesTitle {
+        font-size: 14px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin: 0;
+    }
+
+    #seriesInfo {
+        font-size: 11px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     .hamburger-btn {
@@ -860,22 +924,26 @@ h1 {
         font-size: 13px;
     }
 
-    .header-actions #summary {
+    /* Summary: stack each stat on its own row */
+    .summary-stats {
+        flex-direction: column;
+        align-items: flex-start;
         width: 100%;
-        justify-content: center;
-        height: 2.5rem;
-        font-size: 13px;
+        gap: 6px;
+        padding: 10px;
     }
 
-    .lang-switcher,
-    .theme-switcher {
+    .summary-item + .summary-item::before {
+        content: none;
+    }
+
+    .lang-switcher {
         width: 100%;
         justify-content: stretch;
         height: 2.5rem;
     }
 
-    .lang-switcher > button,
-    .theme-switcher > button {
+    .lang-switcher > button {
         flex: 1;
         height: 100%;
         padding: 0;
@@ -900,5 +968,34 @@ h1 {
 
     main {
         padding: 16px 12px;
+    }
+
+    /* Episode list: single column on mobile */
+    .episode-list {
+        grid-template-columns: 1fr;
+    }
+
+    /* Episode card: "Viewed" date wraps below title */
+    .episode {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .episode-viewed {
+        white-space: normal;
+        flex: 0 0 100%;
+        padding-left: calc(56px + 8px);
+        margin-top: -4px;
+    }
+
+    /* Footer: stack on narrow screens */
+    .footer-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .footer-actions {
+        justify-content: flex-start;
+        flex-wrap: wrap;
     }
 }

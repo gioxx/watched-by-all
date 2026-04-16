@@ -31,16 +31,14 @@
                 </div>
             </div>
         </div>
-        <div class="header-actions">
+        <button id="btnHamburger" class="hamburger-btn" aria-label="Menu" aria-expanded="false" aria-controls="headerActions">
+            <span></span><span></span><span></span>
+        </button>
+        <div class="header-actions" id="headerActions">
             <div id="detailUserPill" class="pill">👤 —</div>
             <div class="lang-switcher" id="langSwitcher" role="group" aria-label="Language">
                 <button type="button" class="lang-btn" data-lang="en">EN</button>
                 <button type="button" class="lang-btn" data-lang="it">IT</button>
-            </div>
-            <div class="theme-switcher" id="themeSwitcher" role="group" aria-label="Theme">
-                <button type="button" class="theme-btn" data-theme-value="system">System</button>
-                <button type="button" class="theme-btn" data-theme-value="dark">Dark</button>
-                <button type="button" class="theme-btn" data-theme-value="light">Light</button>
             </div>
         </div>
     </header>
@@ -54,6 +52,11 @@
                     <div class="footer-meta" id="footerProjectDesc">Jellyfin watched-by-all dashboard.</div>
                 </div>
                 <div class="footer-actions">
+                    <div class="theme-switcher" id="themeSwitcher" role="group" aria-label="Theme">
+                        <button type="button" class="theme-btn" data-theme-value="system">System</button>
+                        <button type="button" class="theme-btn" data-theme-value="dark">Dark</button>
+                        <button type="button" class="theme-btn" data-theme-value="light">Light</button>
+                    </div>
                     <div class="pill" id="footerVersion">Version —</div>
                     <a class="pill icon-btn" id="footerRepoLink" href="https://github.com/gioxx/watched-by-all" target="_blank" rel="noopener noreferrer" aria-label="GitHub repository" title="GitHub repository">
                         <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -258,7 +261,7 @@
                     const seasonLabel = e.seasonName || '';
                     return `<div class="episode">
                         <div class="episode-cover">${cover}</div>
-                        <div style="flex:1 1 auto;">
+                        <div class="episode-info">
                             <div class="epi-title">${escapeHtml(code ? code + ' · ' : '')}${escapeHtml(epTitle)}</div>
                             <div class="epi-sub">${escapeHtml(seasonLabel)}</div>
                         </div>
@@ -312,6 +315,21 @@
         });
 
         document.getElementById('backBtn').addEventListener('click', goBack);
+
+        const btnHamburger = document.getElementById('btnHamburger');
+        const headerActions = document.getElementById('headerActions');
+        if (btnHamburger && headerActions) {
+            btnHamburger.addEventListener('click', () => {
+                const isOpen = headerActions.classList.toggle('is-open');
+                btnHamburger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+            });
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('header')) {
+                    headerActions.classList.remove('is-open');
+                    btnHamburger.setAttribute('aria-expanded', 'false');
+                }
+            });
+        }
 
         (function () {
             const btn = document.getElementById('scrollTopBtn');
