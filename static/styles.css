@@ -895,9 +895,12 @@ h1 { margin: 0; font-size: 20px; }
 
     /* ──────────────────────────────────────────────────────
        history_detail.html header — flex-wrap rows
+       (overrides the grid layout set on header above)
        ────────────────────────────────────────────────────── */
     .detail-header {
+        display: flex;
         flex-wrap: wrap;
+        height: auto;
         padding: 0 14px;
         gap: 0;
     }
