@@ -196,12 +196,12 @@ header {
 .brand {
     display: flex;
     align-items: center;
-    gap: 9px;
+    gap: 10px;
     text-decoration: none;
     color: var(--text);
-    font-size: 15px;
-    font-weight: 700;
-    letter-spacing: -.15px;
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: -.3px;
     white-space: nowrap;
     flex-shrink: 0;
 }
@@ -211,15 +211,16 @@ header {
 .summary-stats {
     flex: 1;
     min-width: 0;
-    height: 34px;
-    padding: 0 12px;
+    height: 36px;
+    padding: 0 16px;
     border: 1px solid var(--border);
     border-radius: var(--r-pill);
     background: var(--surface-2);
-    font-size: 12px;
+    font-size: 13px;
     color: var(--muted);
     display: inline-flex;
     align-items: center;
+    gap: 6px;
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
@@ -227,7 +228,8 @@ header {
 .summary-stats-line,
 .summary-sep-mid,
 .summary-date-line { display: inline; }
-.summary-sep { color: var(--muted); }
+.summary-sep,
+.summary-sep-mid { color: var(--border-hi); padding: 0 2px; }
 
 /* Header actions */
 .header-actions {
@@ -894,30 +896,32 @@ h1 { margin: 0; font-size: 20px; }
     .lang-switcher > button { flex: 1; height: 100%; padding: 0; font-size: 12px; }
 
     /* ──────────────────────────────────────────────────────
-       history_detail.html header — flex-wrap rows
-       (overrides the grid layout set on header above)
+       history_detail.html header — block layout (reliable)
+       display:block means every direct child is full-width
        ────────────────────────────────────────────────────── */
     .detail-header {
-        display: flex;
-        flex-wrap: wrap;
+        display: block;
         height: auto;
         padding: 0 14px;
-        gap: 0;
     }
 
-    /* Row 1: back button + icon + hamburger */
+    /* Row 1: back + icon + hamburger — internal flex */
     .detail-nav-row {
-        flex: 0 0 100%;
+        display: flex;
+        align-items: center;
         height: 48px;
-        justify-content: flex-start;
+        gap: 10px;
     }
-    .detail-nav-row .hamburger-btn { margin-left: auto; }
+    .detail-nav-row .hamburger-btn {
+        display: flex;
+        margin-left: auto;
+    }
 
     /* Row 2: series title */
     .detail-header .detail-title {
-        flex: 0 0 100%;
         padding: 6px 0 5px;
         border-top: 1px solid var(--border);
+        min-width: 0;
     }
     .detail-header .detail-title h1 {
         font-size: 14px;
@@ -927,7 +931,9 @@ h1 { margin: 0; font-size: 20px; }
     }
 
     /* Row 3: actions (dropdown) */
-    .detail-header .header-actions { flex: 0 0 100%; }
+    .detail-header .header-actions {
+        width: 100%;
+    }
 
     /* ──────────────────────────────────────────────────────
        Main
