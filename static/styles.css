@@ -774,3 +774,131 @@ h1 {
     flex-wrap: wrap;
     padding-top: 6px;
 }
+
+/* ===== HAMBURGER BUTTON ===== */
+
+.hamburger-btn {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+    width: 2.25rem;
+    height: 2.25rem;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface-2);
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+    flex-shrink: 0;
+}
+
+.hamburger-btn span {
+    display: block;
+    width: 16px;
+    height: 2px;
+    background: var(--text);
+    border-radius: 2px;
+    transition: transform .2s ease, opacity .2s ease;
+}
+
+.hamburger-btn:hover {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent-veil) 80%, var(--surface-strong));
+}
+
+.hamburger-btn[aria-expanded="true"] span:nth-child(1) {
+    transform: translateY(7px) rotate(45deg);
+}
+
+.hamburger-btn[aria-expanded="true"] span:nth-child(2) {
+    opacity: 0;
+}
+
+.hamburger-btn[aria-expanded="true"] span:nth-child(3) {
+    transform: translateY(-7px) rotate(-45deg);
+}
+
+/* ===== MOBILE RESPONSIVE ===== */
+
+@media (max-width: 640px) {
+    header {
+        flex-wrap: wrap;
+        padding: 10px 14px;
+        gap: 8px;
+    }
+
+    .brand {
+        flex: 1;
+    }
+
+    .hamburger-btn {
+        display: flex;
+        margin-left: auto;
+    }
+
+    .header-actions {
+        display: none;
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+        padding-top: 8px;
+        border-top: 1px solid var(--border);
+    }
+
+    .header-actions.is-open {
+        display: flex;
+    }
+
+    .header-actions .pill,
+    .header-actions button.pill {
+        width: 100%;
+        justify-content: center;
+        height: 2.5rem;
+        font-size: 13px;
+    }
+
+    .header-actions #summary {
+        width: 100%;
+        justify-content: center;
+        height: 2.5rem;
+        font-size: 13px;
+    }
+
+    .lang-switcher,
+    .theme-switcher {
+        width: 100%;
+        justify-content: stretch;
+        height: 2.5rem;
+    }
+
+    .lang-switcher > button,
+    .theme-switcher > button {
+        flex: 1;
+        height: 100%;
+        padding: 0;
+        font-size: 0.82rem;
+    }
+
+    /* Tabs: equal-width full-row */
+    .tabs {
+        flex-wrap: nowrap;
+        gap: 4px;
+    }
+
+    .tabs button {
+        flex: 1;
+        text-align: center;
+        padding: 8px 4px;
+        font-size: 12px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    main {
+        padding: 16px 12px;
+    }
+}

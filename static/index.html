@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Watched</title>
     <link rel="icon" type="image/webp" href="/static/watched_icon.webp" />
-    <link rel="stylesheet" href="/static/styles.css?v=0.5.6" />
+    <link rel="stylesheet" href="/static/styles.css?v=0.5.1" />
     <script>
         (() => {
             const pref = localStorage.getItem('theme-preference') || 'system';
@@ -25,7 +25,10 @@
             <img src="/static/watched_icon.webp" alt="" width="44" height="44" aria-hidden="true" />
             <span id="brandTitle">Watched</span>
         </a>
-        <div class="header-actions">
+        <button id="btnHamburger" class="hamburger-btn" aria-label="Menu" aria-expanded="false" aria-controls="headerActions">
+            <span></span><span></span><span></span>
+        </button>
+        <div class="header-actions" id="headerActions">
             <button id="btnUsers" class="pill">👤 Users</button>
             <div id="summary" class="pill">ℹ️ Loading…</div>
             <button id="btnCache" class="pill">🗂️ Cache</button>
@@ -739,6 +742,21 @@
             await loadSummary();
             await loadItems();
         });
+
+        const btnHamburger = document.getElementById('btnHamburger');
+        const headerActions = document.getElementById('headerActions');
+        if (btnHamburger && headerActions) {
+            btnHamburger.addEventListener('click', () => {
+                const isOpen = headerActions.classList.toggle('is-open');
+                btnHamburger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+            });
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('header')) {
+                    headerActions.classList.remove('is-open');
+                    btnHamburger.setAttribute('aria-expanded', 'false');
+                }
+            });
+        }
 
         btnUsers.addEventListener('click', async () => {
             await loadUsers();
