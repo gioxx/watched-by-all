@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Watched</title>
     <link rel="icon" type="image/webp" href="/static/watched_icon.webp" />
-    <link rel="stylesheet" href="/static/styles.css?v=0.5.6" />
+    <link rel="stylesheet" href="/static/styles.css?v=0.5.4" />
     <script>
         (() => {
             const pref = localStorage.getItem('theme-preference') || 'system';
@@ -25,18 +25,16 @@
             <img src="/static/watched_icon.webp" alt="" width="44" height="44" aria-hidden="true" />
             <span id="brandTitle">Watched</span>
         </a>
-        <div class="header-actions">
+        <div id="summary" class="pill summary-stats">ℹ️ Loading…</div>
+        <button id="btnHamburger" class="hamburger-btn" aria-label="Menu" aria-expanded="false" aria-controls="headerActions">
+            <span></span><span></span><span></span>
+        </button>
+        <div class="header-actions" id="headerActions">
             <button id="btnUsers" class="pill">👤 Users</button>
-            <div id="summary" class="pill">ℹ️ Loading…</div>
             <button id="btnCache" class="pill">🗂️ Cache</button>
             <div class="lang-switcher" id="langSwitcher" role="group" aria-label="Language">
                 <button type="button" class="lang-btn" data-lang="en">EN</button>
                 <button type="button" class="lang-btn" data-lang="it">IT</button>
-            </div>
-            <div class="theme-switcher" id="themeSwitcher" role="group" aria-label="Theme">
-                <button type="button" class="theme-btn" data-theme-value="system">System</button>
-                <button type="button" class="theme-btn" data-theme-value="dark">Dark</button>
-                <button type="button" class="theme-btn" data-theme-value="light">Light</button>
             </div>
         </div>
     </header>
@@ -79,6 +77,13 @@
                             <path fill="currentColor" d="M12 .5C5.65.5.5 5.65.5 12c0 5.1 3.29 9.42 7.86 10.95.58.12.79-.25.79-.56 0-.28-.01-1.02-.02-2-3.2.69-3.88-1.54-3.88-1.54-.53-1.33-1.29-1.68-1.29-1.68-1.06-.72.08-.71.08-.71 1.17.08 1.79 1.21 1.79 1.21 1.04 1.78 2.73 1.27 3.4.97.11-.76.41-1.27.75-1.56-2.56-.29-5.26-1.28-5.26-5.7 0-1.26.45-2.28 1.2-3.08-.12-.29-.52-1.47.12-3.06 0 0 .97-.31 3.18 1.18a11.1 11.1 0 0 1 2.9-.39c.99 0 1.99.13 2.92.39 2.2-1.49 3.17-1.18 3.17-1.18.64 1.59.24 2.77.12 3.06.75.8 1.2 1.82 1.2 3.08 0 4.43-2.7 5.41-5.28 5.69.42.36.8 1.07.8 2.16 0 1.56-.01 2.81-.01 3.19 0 .31.21.68.8.56A10.52 10.52 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5Z"/>
                         </svg>
                     </a>
+                </div>
+            </div>
+            <div class="footer-theme-bar">
+                <div class="theme-switcher" id="themeSwitcher" role="group" aria-label="Theme">
+                    <button type="button" class="theme-btn" data-theme-value="system">System</button>
+                    <button type="button" class="theme-btn" data-theme-value="dark">Dark</button>
+                    <button type="button" class="theme-btn" data-theme-value="light">Light</button>
                 </div>
             </div>
         </section>
@@ -645,20 +650,28 @@
                 const movies = Number(s.moviesByAll ?? 0);
                 const seasons = Number(s.showsByAll ?? 0);
                 summaryUsersCount = users;
-                summary.textContent = `${t('header.summaryIcon')} ${t('summary.template', {
-                    users,
-                    usersNoun: userNoun(users),
-                    movies,
-                    moviesNoun: movieNoun(movies),
-                    seasons,
-                    seasonsNoun: seasonNoun(seasons),
+                const fullSummary = t('summary.template', {
+                    users, usersNoun: userNoun(users),
+                    movies, moviesNoun: movieNoun(movies),
+                    seasons, seasonsNoun: seasonNoun(seasons),
                     date
-                })}`;
+                });
+                const icon = t('header.summaryIcon');
+                const parts = fullSummary.split(' · ');
+                const statsLine = parts.slice(0, 3).map((part, i) => {
+                    const content = i === 0 ? `${icon} ${part}` : part;
+                    const sep = i > 0 ? '<span class="summary-sep" aria-hidden="true"> · </span>' : '';
+                    return `${sep}<span class="summary-item">${escapeHtml(content)}</span>`;
+                }).join('');
+                const datePart = parts[3] ? escapeHtml(parts[3]) : '';
+                summary.innerHTML =
+                    `<span class="summary-stats-line">${statsLine}</span>` +
+                    (datePart ? `<span class="summary-sep-mid" aria-hidden="true"> · </span><span class="summary-date-line">${datePart}</span>` : '');
                 renderUsersPill();
                 setBackendStatus('', false);
             } catch (e) {
                 setBackendStatus(t('loadingError') || '⚠️ Jellyfin unreachable. Retry.', true);
-                summary.textContent = `${t('header.summaryIcon')} —`;
+                summary.innerHTML = `<span class="summary-stats-line"><span class="summary-item">ℹ️ —</span></span>`;
                 renderUsersPill();
             }
         }
@@ -739,6 +752,21 @@
             await loadSummary();
             await loadItems();
         });
+
+        const btnHamburger = document.getElementById('btnHamburger');
+        const headerActions = document.getElementById('headerActions');
+        if (btnHamburger && headerActions) {
+            btnHamburger.addEventListener('click', () => {
+                const isOpen = headerActions.classList.toggle('is-open');
+                btnHamburger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+            });
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('header')) {
+                    headerActions.classList.remove('is-open');
+                    btnHamburger.setAttribute('aria-expanded', 'false');
+                }
+            });
+        }
 
         btnUsers.addEventListener('click', async () => {
             await loadUsers();
