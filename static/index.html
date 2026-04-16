@@ -657,16 +657,21 @@
                     date
                 });
                 const icon = t('header.summaryIcon');
-                summary.innerHTML = fullSummary.split(' · ').map((part, i) => {
+                const parts = fullSummary.split(' · ');
+                const statsLine = parts.slice(0, 3).map((part, i) => {
                     const content = i === 0 ? `${icon} ${part}` : part;
                     const sep = i > 0 ? '<span class="summary-sep" aria-hidden="true"> · </span>' : '';
                     return `${sep}<span class="summary-item">${escapeHtml(content)}</span>`;
                 }).join('');
+                const datePart = parts[3] ? escapeHtml(parts[3]) : '';
+                summary.innerHTML =
+                    `<span class="summary-stats-line">${statsLine}</span>` +
+                    (datePart ? `<span class="summary-sep-mid" aria-hidden="true"> · </span><span class="summary-date-line">${datePart}</span>` : '');
                 renderUsersPill();
                 setBackendStatus('', false);
             } catch (e) {
                 setBackendStatus(t('loadingError') || '⚠️ Jellyfin unreachable. Retry.', true);
-                summary.innerHTML = `<span class="summary-item">ℹ️ —</span>`;
+                summary.innerHTML = `<span class="summary-stats-line"><span class="summary-item">ℹ️ —</span></span>`;
                 renderUsersPill();
             }
         }

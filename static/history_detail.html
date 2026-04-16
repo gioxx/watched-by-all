@@ -20,18 +20,20 @@
         <span>⏳</span>
         <span id="bootLoadingText">Loading data…</span>
     </div>
-    <header>
-        <button id="backBtn" class="pill" type="button">← Back</button>
-        <a href="/" aria-label="Watched — home" class="brand-mini">
-            <img src="/static/watched_icon.webp" alt="" width="34" height="34" aria-hidden="true" />
-        </a>
+    <header class="detail-header">
+        <div class="detail-nav-row">
+            <button id="backBtn" class="pill" type="button">← Back</button>
+            <a href="/" aria-label="Watched — home" class="brand-mini">
+                <img src="/static/watched_icon.webp" alt="" width="34" height="34" aria-hidden="true" />
+            </a>
+            <button id="btnHamburger" class="hamburger-btn" aria-label="Menu" aria-expanded="false" aria-controls="headerActions">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
         <div class="detail-title">
             <h1 id="seriesTitle">Serie</h1>
             <div class="muted" id="seriesInfo"></div>
         </div>
-        <button id="btnHamburger" class="hamburger-btn" aria-label="Menu" aria-expanded="false" aria-controls="headerActions">
-            <span></span><span></span><span></span>
-        </button>
         <div class="header-actions" id="headerActions">
             <div id="detailUserPill" class="pill">👤 —</div>
             <div class="lang-switcher" id="langSwitcher" role="group" aria-label="Language">
