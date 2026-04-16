@@ -783,8 +783,8 @@ h1 {
     display: inline-flex;
     align-items: center;
     flex-wrap: wrap;
-    padding-top: 4px;
-    padding-bottom: 4px;
+    white-space: normal;
+    padding: 4px 10px;
     gap: 0;
 }
 
@@ -926,6 +926,7 @@ h1 {
 
     /* Summary: stack each stat on its own row */
     .summary-stats {
+        display: flex;
         flex-direction: column;
         align-items: flex-start;
         width: 100%;

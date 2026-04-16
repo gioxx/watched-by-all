@@ -648,12 +648,15 @@
                 const movies = Number(s.moviesByAll ?? 0);
                 const seasons = Number(s.showsByAll ?? 0);
                 summaryUsersCount = users;
-                summary.innerHTML = [
-                    `<span class="summary-item">👤 ${users} ${escapeHtml(userNoun(users))}</span>`,
-                    `<span class="summary-item">🎬 ${movies} ${escapeHtml(movieNoun(movies))}</span>`,
-                    `<span class="summary-item">📺 ${seasons} ${escapeHtml(seasonNoun(seasons))}</span>`,
-                    `<span class="summary-item">ℹ️ ${escapeHtml(t('summary.updatedPrefix'))}: ${escapeHtml(date)}</span>`
-                ].join('');
+                const fullSummary = t('summary.template', {
+                    users, usersNoun: userNoun(users),
+                    movies, moviesNoun: movieNoun(movies),
+                    seasons, seasonsNoun: seasonNoun(seasons),
+                    date
+                });
+                summary.innerHTML = fullSummary.split(' · ')
+                    .map(part => `<span class="summary-item">${escapeHtml(part)}</span>`)
+                    .join('');
                 renderUsersPill();
                 setBackendStatus('', false);
             } catch (e) {

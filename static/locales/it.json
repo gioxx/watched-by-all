@@ -32,7 +32,6 @@
   "label.tvSeries": "Serie TV",
   "button.episodesDetail": "Dettaglio episodi",
   "summary.template": "{users} {usersNoun} · 🎬 {movies} {moviesNoun} · 📺 {seasons} {seasonsNoun} · ℹ️ aggiornato: {date}",
-  "summary.updatedPrefix": "aggiornato",
   "label.movie.one": "film",
   "label.movie.many": "film",
   "label.season.one": "stagione",
