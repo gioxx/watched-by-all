@@ -1,8 +1,13 @@
 # Watched (_former Jellyfin – Watched by Everyone_)
 
-[![](https://img.shields.io/github/issues/gioxx/watched-by-all.svg)](https://github.com/gioxx/watched-by-all/issues) [![](https://img.shields.io/github/issues-pr-raw/gioxx/watched-by-all.svg)](https://github.com/gioxx/watched-by-all/pulls) [![](https://img.shields.io/docker/pulls/gfsolone/watched-by-all.svg)](https://hub.docker.com/r/gfsolone/watched-by-all) [![](https://img.shields.io/docker/image-size/gfsolone/watched-by-all/latest.svg)](https://hub.docker.com/r/gfsolone/watched-by-all)
-
 Web dashboard for Jellyfin to see what’s been watched and what is watched by **all** selected users. It runs as a FastAPI app that serves the static UI.
+
+[![](https://img.shields.io/github/issues/gioxx/watched-by-all.svg)](https://github.com/gioxx/watched-by-all/issues)
+[![](https://img.shields.io/github/issues-pr-raw/gioxx/watched-by-all.svg)](https://github.com/gioxx/watched-by-all/pulls)
+![MIT License](https://img.shields.io/github/license/gioxx/watched-by-all)
+![Docker](https://img.shields.io/badge/Docker-ready-blue?logo=docker)
+[![](https://img.shields.io/docker/pulls/gfsolone/watched-by-all.svg)](https://hub.docker.com/r/gfsolone/watched-by-all)
+[![](https://img.shields.io/docker/image-size/gfsolone/watched-by-all/latest.svg)](https://hub.docker.com/r/gfsolone/watched-by-all)
 
 ## Features
 - **Movies**: shows titles marked as watched by every selected user, with runtime/ratings/playcount.
