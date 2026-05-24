@@ -1,5 +1,7 @@
 # Watched (_former Jellyfin – Watched by Everyone_)
 
+[![](https://img.shields.io/github/issues/gioxx/watched-by-all.svg)](https://github.com/gioxx/watched-by-all/issues) [![](https://img.shields.io/github/issues-pr-raw/gioxx/watched-by-all.svg)](https://github.com/gioxx/watched-by-all/pulls) [![](https://img.shields.io/docker/pulls/gfsolone/watched-by-all.svg)](https://hub.docker.com/r/gfsolone/watched-by-all) [![](https://img.shields.io/docker/image-size/gfsolone/watched-by-all/latest.svg)](https://hub.docker.com/r/gfsolone/watched-by-all)
+
 Web dashboard for Jellyfin to see what’s been watched and what is watched by **all** selected users. It runs as a FastAPI app that serves the static UI.
 
 ## Features
