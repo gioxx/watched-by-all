@@ -4,8 +4,8 @@ Web dashboard for Jellyfin to see what’s been watched and what is watched by *
 
 [![](https://img.shields.io/github/issues/gioxx/watched-by-all.svg)](https://github.com/gioxx/watched-by-all/issues)
 [![](https://img.shields.io/github/issues-pr-raw/gioxx/watched-by-all.svg)](https://github.com/gioxx/watched-by-all/pulls)
-![MIT License](https://img.shields.io/github/license/gioxx/watched-by-all)
-![Docker](https://img.shields.io/badge/Docker-ready-blue?logo=docker)
+[![MIT License](https://img.shields.io/github/license/gioxx/watched-by-all)](https://github.com/gioxx/watched-by-all/blob/main/LICENSE)
+[![](https://img.shields.io/badge/GHCR-available-blue?logo=docker)](https://github.com/users/gioxx/packages/container/package/watched-by-all)
 [![](https://img.shields.io/docker/pulls/gfsolone/watched-by-all.svg)](https://hub.docker.com/r/gfsolone/watched-by-all)
 [![](https://img.shields.io/docker/image-size/gfsolone/watched-by-all/latest.svg)](https://hub.docker.com/r/gfsolone/watched-by-all)
 
