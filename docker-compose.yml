@@ -12,3 +12,9 @@ services:
     restart: unless-stopped
     cpus: 0.5
     mem_limit: 1g
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8088/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s

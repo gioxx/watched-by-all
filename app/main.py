@@ -834,6 +834,17 @@ async def api_set_selected_users(payload: Dict[str, Any] = Body(...)):
     return JSONResponse({"ok": True, "selected_user_ids": sorted(list(cache.selected_user_ids))})
 
 
+@app.get("/healthz")
+async def healthz():
+    """Report unhealthy if the Jellyfin cache hasn't refreshed successfully recently."""
+    if cache.last_refresh_ts <= 0 or cache.is_stale(REFRESH_MINUTES * 2):
+        return JSONResponse(
+            {"ok": False, "lastRefresh": cache.last_refresh_ts},
+            status_code=503,
+        )
+    return JSONResponse({"ok": True, "lastRefresh": cache.last_refresh_ts})
+
+
 @app.post("/api/refresh")
 async def api_force_refresh():
     """Force a cache refresh (useful after library changes)."""
