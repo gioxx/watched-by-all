@@ -11,7 +11,15 @@ class JellyfinClient:
 
     async def _get(self, path: str, **params):
         url = f"{self.base_url}{path}"
-        headers = {"X-Emby-Token": self.apikey, "Accept": "application/json"}
+        authorization = (
+            "MediaBrowser , "
+            'Client="watched-by-all", '
+            'Device="script", '
+            'DeviceId="script", '
+            'Version="1.0.0", '
+            f'Token="{self.apikey}"'
+        )
+        headers = {"Authorization": authorization, "Accept": "application/json"}
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             r = await client.get(url, headers=headers, params=params)
             r.raise_for_status()
